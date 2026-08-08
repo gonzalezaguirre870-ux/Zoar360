@@ -8,7 +8,7 @@ app = Flask(__name__)
 CORS(app)
 app.secret_key = 'clave_super_secreta_para_sesiones'
 
-# Ruta de la base de datos
+# Ruta de la base de datos en Render
 DB_PATH = os.path.join(os.path.dirname(__file__), '..', 'database', 'iglesia.db')
 
 def get_db():
@@ -34,7 +34,6 @@ def login():
 # ==================== MIEMBROS ====================
 @app.route('/api/miembros', methods=['GET'])
 def obtener_miembros():
-    # Ahora el Pastor (y todos los roles) pueden ver la lista de miembros sin error
     conn = get_db()
     miembros = conn.execute("SELECT * FROM miembros ORDER BY codigo ASC").fetchall()
     conn.close()
@@ -67,7 +66,7 @@ def eliminar_miembro(codigo):
     conn.close()
     return jsonify({"message": "Miembro eliminado"}), 200
 
-# ==================== SOLICITUDES Y ASISTENCIA ====================
+# ==================== SOLICITUDES ====================
 @app.route('/api/solicitudes', methods=['POST'])
 def crear_solicitud():
     data = request.json
@@ -78,7 +77,7 @@ def crear_solicitud():
     conn.close()
     return jsonify({"message": "Solicitud enviada"}), 201
 
-# ==================== ASISTENCIA ====================
+# ==================== ASISTENCIA (CON MECANISMO DE RELOJ AUTOMÁTICO) ====================
 @app.route('/api/asistencia/grupo/<grupo>', methods=['GET'])
 def obtener_asistencia_grupo(grupo):
     conn = get_db()
@@ -95,17 +94,61 @@ def obtener_asistencia_grupo(grupo):
 @app.route('/api/marcar-asistencia', methods=['POST'])
 def marcar_asistencia():
     if 'user_id' not in session: return jsonify({"error": "No autorizado"}), 401
+    
     data = request.json
-    ahora = datetime.datetime.now()
+    # Capturar la hora REAL del servidor (Render). No se puede engañar.
+    ahora = datetime.datetime.now() 
+    fecha_actual = ahora.date()
+    hora_actual = ahora.time()
+
     conn = get_db()
     miembro = conn.execute("SELECT * FROM miembros WHERE codigo = ?", (data['codigo'],)).fetchone()
     if not miembro: return jsonify({"error": "Miembro no encontrado"}), 404
 
+    dia = ['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado','Domingo'][ahora.weekday()]
+    usuario_rol = session.get('user_rol')
+    error = None
+
+    # === LÓGICA DE RELOJ Y CALENDARIO AUTOMÁTICA ===
+    # Nota: Render usa tiempo UTC. Ajustamos para El Salvador (-6 horas).
+    # Si no quieres ajustar zona horaria, la lógica de Jueves 5:45 PM se convierte a 11:45 PM UTC.
+    
+    if dia == 'Jueves':
+        # Horario en El Salvador: 5:45 PM a 7:00 PM
+        inicio = datetime.time(23, 45) # 5:45 PM en UTC
+        fin = datetime.time(1, 0)     # 7:00 PM en UTC (del día siguiente, pero lo dejamos simple)
+        
+        if not (inicio <= hora_actual <= datetime.time(23, 59)): 
+            error = "Fuera de horario. Solo Jueves de 5:45 PM a 7:00 PM (hora local)."
+        elif usuario_rol != 'Secretario_Fraternidad_de_Varones': error = "Solo el Secretario de Fraternidad."
+        elif 'Fraternidad' not in miembro['grupo']: error = "Este miembro no es de Fraternidad."
+    elif dia == 'Sábado':
+        if fecha_actual.day not in [1,8,15,22,29]: error = "Hoy no es día de Embajadores"
+        elif usuario_rol != 'Secretaria_Embajadores_de_Cristo': error = "Solo la Secretaria de Embajadores."
+        elif 'Embajadores' not in miembro['grupo']: error = "Este miembro no es de Embajadores."
+    elif dia == 'Domingo' and usuario_rol not in ['Administrador', 'Pastor', 'Secretario_General']:
+        error = "El domingo es general, solo Pastor, Admin o Gral. pueden marcar."
+
+    if error:
+        conn.close()
+        return jsonify({"error": error}), 403
+
     conn.execute("INSERT INTO asistencias (miembro_id, fecha, hora) VALUES (?, ?, ?)", 
-                 (miembro['id'], ahora.strftime('%Y-%m-%d'), ahora.strftime('%H:%M:%S')))
+                 (miembro['id'], fecha_actual.strftime('%Y-%m-%d'), hora_actual.strftime('%H:%M:%S')))
     conn.commit()
     conn.close()
-    return jsonify({"message": "Asistencia marcada"}), 200
+    return jsonify({"message": "Asistencia marcada", "fecha": str(fecha_actual)}), 200
+
+# ==================== INICIALIZACIÓN DE BASE DE DATOS (Credenciales Faltantes) ====================
+# Este bloque se ejecuta al iniciar el servidor para asegurar que la Secretaria Femenil exista
+with app.app_context():
+    conn = get_db()
+    conn.execute("""
+        INSERT OR IGNORE INTO usuarios (nombre, email, password_hash, rol) 
+        VALUES ('Secretaria Concilio Misionero Femenil', 'femenil@iglesiazoarsv.org', 'FemenilZoar2026', 'Secretaria_Concilio_Misionero_Femenil')
+    """)
+    conn.commit()
+    conn.close()
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)

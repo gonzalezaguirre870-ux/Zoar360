@@ -15,24 +15,15 @@ def get_db():
     conn.row_factory = sqlite3.Row
     return conn
 
-# ==================== LOGIN Y PERMISOS ====================
 @app.route('/api/login', methods=['POST'])
 def login():
     data = request.json
     user = get_db().execute("SELECT * FROM usuarios WHERE email = ? AND password_hash = ?", (data['email'], data['password'])).fetchone()
     if user:
-        session.update({'user_id': user['id'], 'user_rol': user['rol'], 'user_email': user['email']})
+        session.update({'user_id': user['id'], 'user_rol': user['rol']})
         return jsonify({"message": "Login exitoso", "rol": user['rol'], "email": user['email']}), 200
     return jsonify({"error": "Credenciales incorrectas"}), 401
 
-@app.route('/api/verificar-admin', methods=['POST'])
-def verificar_admin():
-    data = request.json
-    user = get_db().execute("SELECT * FROM usuarios WHERE rol='Administrador' AND password_hash=?", (data['password'],)).fetchone()
-    if user: return jsonify({"message": "Acceso concedido"}), 200
-    return jsonify({"error": "Clave incorrecta"}), 401
-
-# ==================== MIEMBROS ====================
 @app.route('/api/miembros', methods=['GET'])
 def obtener_miembros():
     conn = get_db()
@@ -43,26 +34,34 @@ def obtener_miembros():
 @app.route('/api/miembros', methods=['POST'])
 def crear_miembro():
     if session.get('user_rol') not in ['Administrador', 'Pastor']:
-        return jsonify({"error": "Solo Administrador o Pastor pueden registrar."}), 403
+        return jsonify({"error": "Solo Pastor o Admin registran."}), 403
     data = request.json
     conn = get_db()
     ultimo = conn.execute("SELECT MAX(codigo) as max FROM miembros").fetchone()
     nuevo_codigo = f"{(int(ultimo['max']) + 1) if ultimo and ultimo['max'] else 1:04d}"
     nombre_final = data['nombre'] + (f" ({data['liderazgo']})" if data.get('liderazgo') else "")
-    conn.execute("INSERT INTO miembros (codigo, nombre, telefono, tipo, grupo) VALUES (?, ?, ?, ?, ?)", 
-                 (nuevo_codigo, nombre_final, data.get('telefono'), data['tipo'], data.get('grupo', 'General')))
+    conn.execute("INSERT INTO miembros (codigo, nombre, telefono, tipo, grupo) VALUES (?, ?, ?, ?, ?)", (nuevo_codigo, nombre_final, data.get('telefono'), data['tipo'], data.get('grupo', 'General')))
     conn.commit()
     conn.close()
     return jsonify({"message": "Miembro creado"}), 201
 
-# ==================== SOLICITUDES ====================
+@app.route('/api/miembros/<codigo>', methods=['DELETE'])
+def eliminar_miembro(codigo):
+    if session.get('user_rol') not in ['Administrador', 'Pastor']:
+        return jsonify({"error": "Acceso denegado."}), 403
+    conn = get_db()
+    conn.execute("DELETE FROM miembros WHERE codigo = ?", (codigo,))
+    conn.commit()
+    conn.close()
+    return jsonify({"message": "Eliminado"}), 200
+
 @app.route('/api/solicitudes', methods=['POST'])
 def crear_solicitud():
     data = request.json
     conn = get_db()
     nombre_final = data['nombre'] + (f" ({data['liderazgo']})" if data.get('liderazgo') else "")
-    conn.execute("INSERT INTO solicitudes (nombre, telefono, tipo, grupo, solicitante_email, fecha_solicitud) VALUES (?, ?, ?, ?, ?, ?)", 
-                 (nombre_final, data.get('telefono'), data['tipo'], data.get('grupo'), session.get('user_email'), datetime.datetime.now().strftime('%Y-%m-%d')))
+    conn.execute("INSERT INTO solicitudes (nombre, telefono, tipo, grupo, solicitante_email, estado) VALUES (?, ?, ?, ?, ?, ?)", 
+                 (nombre_final, data.get('telefono'), data['tipo'], data.get('grupo'), session.get('user_rol'), 'Pendiente'))
     conn.commit()
     conn.close()
     return jsonify({"message": "Solicitud enviada"}), 201
@@ -75,7 +74,21 @@ def obtener_solicitudes():
     conn.close()
     return jsonify([dict(s) for s in solicitudes])
 
-# ==================== ASISTENCIA (Filtro por grupo) ====================
+@app.route('/api/solicitudes/<int:id>', methods=['PUT'])
+def procesar_solicitud(id):
+    if session.get('user_rol') not in ['Administrador', 'Pastor']: return jsonify({"error": "Acceso denegado"}), 403
+    data = request.json
+    conn = get_db()
+    sol = conn.execute("SELECT * FROM solicitudes WHERE id = ?", (id,)).fetchone()
+    if data['estado'] == 'Aprobada':
+        ultimo = conn.execute("SELECT MAX(codigo) as max FROM miembros").fetchone()
+        nuevo_codigo = f"{(int(ultimo['max']) + 1) if ultimo and ultimo['max'] else 1:04d}"
+        conn.execute("INSERT INTO miembros (codigo, nombre, telefono, tipo, grupo) VALUES (?, ?, ?, ?, ?)", (nuevo_codigo, sol['nombre'], sol['telefono'], sol['tipo'], sol['grupo']))
+    conn.execute("UPDATE solicitudes SET estado = ? WHERE id = ?", (data['estado'], id))
+    conn.commit()
+    conn.close()
+    return jsonify({"message": "Solicitud procesada"}), 200
+
 @app.route('/api/asistencia/grupo/<grupo>', methods=['GET'])
 def obtener_asistencia_grupo(grupo):
     conn = get_db()
@@ -97,19 +110,16 @@ def marcar_asistencia():
     conn = get_db()
     miembro = conn.execute("SELECT * FROM miembros WHERE codigo = ?", (data['codigo'],)).fetchone()
     if not miembro: return jsonify({"error": "Miembro no encontrado"}), 404
-    conn.execute("INSERT INTO asistencias (miembro_id, fecha, hora) VALUES (?, ?, ?)", 
-                 (miembro['id'], ahora.strftime('%Y-%m-%d'), ahora.strftime('%H:%M:%S')))
+    conn.execute("INSERT INTO asistencias (miembro_id, fecha, hora) VALUES (?, ?, ?)", (miembro['id'], ahora.strftime('%Y-%m-%d'), ahora.strftime('%H:%M:%S')))
     conn.commit()
     conn.close()
     return jsonify({"message": "Asistencia marcada"}), 200
 
-# ==================== SANTA CENA ====================
 @app.route('/api/santacena', methods=['POST'])
 def registrar_santa_cena():
     data = request.json
     conn = get_db()
-    conn.execute("INSERT OR REPLACE INTO santacena (miembro_id, fecha, asistio) VALUES (?, ?, ?)", 
-                 (data['miembro_id'], data['fecha'], 1 if data['asistio'] else 0))
+    conn.execute("INSERT OR REPLACE INTO santacena (miembro_id, fecha, asistio) VALUES (?, ?, ?)", (data['miembro_id'], data['fecha'], 1 if data['asistio'] else 0))
     conn.commit()
     conn.close()
     return jsonify({"message": "Registro guardado"}), 200

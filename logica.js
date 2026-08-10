@@ -3,18 +3,21 @@ let rol = null;
 let esModoOscuro = false;
 
 const $ = id => document.getElementById(id);
+
+// ==================== NOTIFICACIONES ====================
 const mostrarNotificacion = (mensaje, tipo = 'error') => {
     const icono = tipo === 'exito' ? '✅' : tipo === 'info' ? 'ℹ️' : '⚠️';
-    $('iconoNotificacion').textContent = icono;
-    $('textoNotificacion').textContent = mensaje;
-    $('modalNotificacion').classList.add('activo');
+    document.getElementById('iconoNotificacion').textContent = icono;
+    document.getElementById('textoNotificacion').textContent = mensaje;
+    document.getElementById('modalNotificacion').classList.add('activo');
 };
 
-function toggleDropdown() { $('headerUser').classList.toggle('abierto'); }
+// ==================== TEMA Y DROPDOWN ====================
+function toggleDropdown() { document.getElementById('headerUser').classList.toggle('abierto'); }
 function cambiarTema() {
     esModoOscuro = !esModoOscuro;
     document.body.classList.toggle('modo-oscuro', esModoOscuro);
-    $('btnTema').innerHTML = esModoOscuro ? '<i class="fa-solid fa-sun"></i>' : '<i class="fa-solid fa-moon"></i>';
+    document.getElementById('btnTema').innerHTML = esModoOscuro ? '<i class="fa-solid fa-sun"></i>' : '<i class="fa-solid fa-moon"></i>';
 }
 
 // ==================== NAVEGACIÓN ====================
@@ -32,7 +35,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 const cambiarPestaña = id => {
     document.querySelectorAll('.tab-content, .sidebar .tab-btn').forEach(el => el.classList.remove('active'));
-    $(id).classList.add('active');
+    document.getElementById(id).classList.add('active');
     document.querySelector(`.tab-btn[data-tab="${id}"]`).classList.add('active');
     if (id === 'membresia') cargarMiembros();
     if (id === 'asistencia') cargarAsistencia();
@@ -49,16 +52,15 @@ async function iniciarSesion(e) {
         if (!res.ok) return mostrarNotificacion(data.error, 'error');
 
         rol = data.rol;
-        $('pantallaLogin').style.display = 'none';
-        $('appPrincipal').style.display = 'block';
-        $('nombreUsuarioHeader').textContent = data.rol;
+        document.getElementById('pantallaLogin').style.display = 'none';
+        document.getElementById('appPrincipal').style.display = 'block';
+        document.getElementById('nombreUsuarioHeader').textContent = data.rol;
 
-        // Dropdown info
         const fechaHoy = new Date().toLocaleDateString('es-ES', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
-        $('fechaHeader').textContent = fechaHoy;
-        $('correoUsuarioDropdown').textContent = data.email;
-        $('rolUsuarioDropdown').textContent = data.rol;
-        $('fechaDropdown').textContent = fechaHoy;
+        document.getElementById('fechaHeader').textContent = fechaHoy;
+        document.getElementById('correoUsuarioDropdown').textContent = data.email;
+        document.getElementById('rolUsuarioDropdown').textContent = data.rol;
+        document.getElementById('fechaDropdown').textContent = fechaHoy;
 
         const esAdminPastor = (rol === 'Administrador' || rol === 'Pastor');
         const esSecretarioGrupo = rol.startsWith('Secretario_') && rol !== 'Secretario_General';
@@ -71,7 +73,6 @@ async function iniciarSesion(e) {
             document.querySelectorAll('.sidebar .tab-btn').forEach(b => {
                 if (b.dataset.tab !== 'asistencia') b.style.display = 'none';
             });
-            // Ocultar botones de Admin
             document.getElementById('btnEliminarAdmin').style.display = 'none';
             document.getElementById('btnActualizarAdmin').style.display = 'none';
             cambiarPestaña('asistencia');
@@ -90,7 +91,7 @@ function cerrarSesion() { location.reload(); }
 async function cargarMiembros() {
     const res = await fetch(`${API}/api/miembros`);
     const lista = await res.json();
-    $('tablaMiembros').innerHTML = lista.map(m =>
+    document.getElementById('tablaMiembros').innerHTML = lista.map(m =>
         `<tr><td><strong>${m.codigo}</strong></td><td>${m.nombre}</td><td>${m.telefono || '---'}</td><td><span class="badge badge-propiedad">${m.tipo}</span></td><td>${m.grupo}</td></tr>`
     ).join('');
 }
@@ -102,24 +103,24 @@ function toggleLiderazgo() {
 
 async function guardarMiembro(e) {
     e.preventDefault();
-    const nombre = $('m_nombre').value.trim();
+    const nombre = document.getElementById('m_nombre').value.trim();
     if (!nombre) return mostrarNotificacion('El nombre no puede estar vacío.', 'error');
 
-    const liderazgoSi = $('m_liderazgo_si').value === 'Si';
-    const liderazgoTexto = $('m_liderazgo_texto').value.trim();
+    const liderazgoSi = document.getElementById('m_liderazgo_si').value === 'Si';
+    const liderazgoTexto = document.getElementById('m_liderazgo_texto').value.trim();
     if (liderazgoSi && !liderazgoTexto) return mostrarNotificacion('Debes especificar el liderazgo.', 'error');
 
     let grupos = [];
-    if ($('g_femenil').checked) grupos.push('Concilio Misionero Femenil');
-    if ($('g_misioneritas').checked) grupos.push('Misioneritas');
-    if ($('g_varones').checked) grupos.push('Fraternidad de Varones');
-    if ($('g_exploradores').checked) grupos.push('Exploradores del Rey');
-    if ($('g_embajadores').checked) grupos.push('Embajadores de Cristo');
+    if (document.getElementById('g_femenil').checked) grupos.push('Concilio Misionero Femenil');
+    if (document.getElementById('g_misioneritas').checked) grupos.push('Misioneritas');
+    if (document.getElementById('g_varones').checked) grupos.push('Fraternidad de Varones');
+    if (document.getElementById('g_exploradores').checked) grupos.push('Exploradores del Rey');
+    if (document.getElementById('g_embajadores').checked) grupos.push('Embajadores de Cristo');
 
     const datos = {
         nombre: nombre,
-        telefono: $('m_telefono').value.trim() || null,
-        tipo: $('m_tipo').value,
+        telefono: document.getElementById('m_telefono').value.trim() || null,
+        tipo: document.getElementById('m_tipo').value,
         grupo: grupos.join(', ') || 'General',
         liderazgo: liderazgoSi ? liderazgoTexto : null
     };
@@ -140,7 +141,7 @@ async function guardarMiembro(e) {
 async function cargarSolicitudes() {
     const res = await fetch(`${API}/api/solicitudes`);
     const lista = await res.json();
-    $('tablaSolicitudes').innerHTML = lista.map(s => `<tr><td>${s.nombre}</td><td><span class="badge badge-pendiente" style="background:#fef3c7;">${s.estado}</span></td><td><button class="btn-submit" style="width:auto; padding:5px 10px; font-size:0.8rem;" onclick="procesarSolicitud(${s.id}, 'Aprobada')">Aprobar</button></td></tr>`).join('');
+    document.getElementById('tablaSolicitudes').innerHTML = lista.map(s => `<tr><td>${s.nombre}</td><td><span class="badge badge-pendiente" style="background:#fef3c7;">${s.estado}</span></td><td><button class="btn-submit" style="width:auto; padding:5px 10px; font-size:0.8rem;" onclick="procesarSolicitud(${s.id}, 'Aprobada')">Aprobar</button></td></tr>`).join('');
 }
 
 async function procesarSolicitud(id, estado) {
@@ -149,27 +150,21 @@ async function procesarSolicitud(id, estado) {
     cargarSolicitudes(); cargarMiembros();
 }
 
-// ==================== ASISTENCIA (CON FILTRO Y HORARIO PERSONALIZADO) ====================
+// ==================== ASISTENCIA ====================
 async function cargarAsistencia() {
     const ahora = new Date();
     const dias = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
     const dia = dias[ahora.getDay()];
-    const mapa = {
-        'Martes': 'Concilio Misionero Femenil', 'Miércoles': 'Misioneritas',
-        'Jueves': 'Fraternidad de Varones', 'Viernes': 'Exploradores del Rey',
-        'Sábado': 'Embajadores de Cristo', 'Domingo': 'Culto General'
-    };
+    const mapa = { 'Martes': 'Concilio Misionero Femenil', 'Miércoles': 'Misioneritas', 'Jueves': 'Fraternidad de Varones', 'Viernes': 'Exploradores del Rey', 'Sábado': 'Embajadores de Cristo', 'Domingo': 'Culto General' };
     let grupo = mapa[dia] || '';
-    $('diaActual').textContent = dia;
-    $('grupoActual').textContent = grupo || 'Sin culto hoy';
-    if (!grupo) return $('tablaAsistencia').innerHTML = "<tr><td colspan='5'>Hoy no hay culto.</td></tr>";
+    document.getElementById('diaActual').textContent = dia;
+    document.getElementById('grupoActual').textContent = grupo || 'Sin culto hoy';
+    if (!grupo) return document.getElementById('tablaAsistencia').innerHTML = "<tr><td colspan='5'>Hoy no hay culto.</td></tr>";
 
-    // SECRETARIOS DE GRUPO: Solo ven su lista filtrada. PASTOR/ADMIN: Ven todo.
     let endpoint = (rol.startsWith('Secretario_') && rol !== 'Secretario_General') ? `${API}/api/asistencia/grupo/${grupo}` : `${API}/api/miembros`;
-
     const res = await fetch(endpoint);
     const lista = await res.json();
-    $('tablaAsistencia').innerHTML = lista.map(m =>
+    document.getElementById('tablaAsistencia').innerHTML = lista.map(m =>
         `<tr><td>${m.codigo}</td><td>${m.nombre}</td><td>${m.grupo}</td><td><input type="checkbox" class="asistencia-check" data-id="${m.id}" /></td><td><strong>${m.total_asistencias || 0}</strong></td></tr>`
     ).join('');
 }
@@ -177,30 +172,6 @@ async function cargarAsistencia() {
 async function guardarAsistencia() {
     const checks = document.querySelectorAll('.asistencia-check:checked');
     if (!checks.length) return mostrarNotificacion('Selecciona al menos un miembro.', 'error');
-
-    const ahora = new Date();
-    const hora = ahora.getHours();
-    const min = ahora.getMinutes();
-    const diaSemana = ahora.getDay(); // 0 = Dom, 2=Mar, 3=Mie, 4=Jue, 5=Vie, 6=Sab
-
-    // REGLAS DE HORARIO PERSONALIZADAS POR DÍA
-    let mensajeError = null;
-    if (diaSemana === 0) { // Domingo (General y Santa Cena)
-        if (hora < 14 || (hora === 14 && min < 45) || hora >= 16) {
-            mensajeError = "⛔ Fuera de horario. Domingos solo de 2:45 PM a 4:00 PM.";
-        }
-    } else if (diaSemana >= 2 && diaSemana <= 6) {
-        // Días de semana (Martes a Sábado)
-        if (hora < 17 || (hora === 17 && min < 45) || hora >= 19) {
-            const diasSemanaMap = { 2: 'Martes', 3: 'Miércoles', 4: 'Jueves', 5: 'Viernes', 6: 'Sábado' };
-            const nombreDia = diasSemanaMap[diaSemana];
-            // Mensaje de error personalizado con el día correcto
-            mensajeError = `⛔ Error: El registro para este grupo solo está habilitado los ${nombreDia} en el horario de 5:45 PM a 7:00 PM.`;
-        }
-    }
-
-    if (mensajeError) return mostrarNotificacion(mensajeError, 'error');
-
     for (const check of checks) {
         const codigo = check.closest('tr').querySelector('td:first-child').innerText.trim();
         await fetch(`${API}/api/marcar-asistencia`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ codigo }) });
@@ -209,41 +180,39 @@ async function guardarAsistencia() {
     cargarAsistencia();
 }
 
-// ==================== SANTA CENA (CRONÓMETRO Y LÓGICA DE PRIVILEGIOS) ====================
+// ==================== SANTA CENA (CRONÓMETRO VIVO) ====================
+let intervaloActual = null;
+
 function iniciarCronometroSantaCena() {
-    const hoy = new Date();
-    let año = hoy.getFullYear();
-    let mes = hoy.getMonth();
-    let dia = 1;
+    if (intervaloActual) clearInterval(intervaloActual);
+    cargarSantaCena();
 
-    // Calcular el PRIMER DOMINGO del mes
-    let primerDiaMes = new Date(año, mes, 1);
-    let primerDomingo = 1 + ((7 - primerDiaMes.getDay()) % 7);
-    let fechaSantaCena = new Date(año, mes, primerDomingo);
+    intervaloActual = setInterval(() => {
+        const hoy = new Date();
+        let año = hoy.getFullYear();
+        let mes = hoy.getMonth();
+        let primerDiaMes = new Date(año, mes, 1);
+        let primerDomingo = 1 + ((7 - primerDiaMes.getDay()) % 7);
+        let fechaSantaCena = new Date(año, mes, primerDomingo);
 
-    // Si ya pasó, calcular el del próximo mes
-    if (hoy > fechaSantaCena) {
-        mes++;
-        if (mes > 11) { mes = 0; año++; }
-        primerDiaMes = new Date(año, mes, 1);
-        primerDomingo = 1 + ((7 - primerDiaMes.getDay()) % 7);
-        fechaSantaCena = new Date(año, mes, primerDomingo);
-    }
+        if (hoy > fechaSantaCena) {
+            mes++;
+            if (mes > 11) { mes = 0; año++; }
+            primerDiaMes = new Date(año, mes, 1);
+            primerDomingo = 1 + ((7 - primerDiaMes.getDay()) % 7);
+            fechaSantaCena = new Date(año, mes, primerDomingo);
+        }
 
-    // Iniciar cronómetro regresivo
-    const intervalo = setInterval(() => {
-        const ahora = new Date();
-        const diferencia = fechaSantaCena - ahora;
+        const diferencia = fechaSantaCena - hoy;
         if (diferencia <= 0) {
-            clearInterval(intervalo);
-            $('cronometroSantaCena').innerHTML = `<span style="color:#22c55e;">¡Hoy es el día!</span>`;
-            cargarSantaCena(); // Cargar lista para marcar
+            document.getElementById('cronometroSantaCena').innerHTML = `<span style="color:#22c55e;">¡Hoy es el día!</span>`;
             return;
         }
         const dias = Math.floor(diferencia / (1000 * 60 * 60 * 24));
         const horas = Math.floor((diferencia % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
         const minutos = Math.floor((diferencia % (1000 * 60 * 60)) / (1000 * 60));
-        $('cronometroSantaCena').textContent = `${dias} días, ${horas} h, ${minutos} m`;
+        const segundos = Math.floor((diferencia % (1000 * 60)) / 1000);
+        document.getElementById('cronometroSantaCena').textContent = `${dias} días, ${horas} h, ${minutos} m, ${segundos} s`;
     }, 1000);
 }
 
@@ -251,37 +220,105 @@ async function cargarSantaCena() {
     const res = await fetch(`${API}/api/miembros`);
     const lista = await res.json();
     const filtrados = lista.filter(m => m.tipo === 'Propiedad');
-    $('tablaSantaCena').innerHTML = filtrados.map(m =>
+    document.getElementById('tablaSantaCena').innerHTML = filtrados.map(m =>
         `<tr><td><strong>${m.codigo}</strong></td><td>${m.nombre}</td><td><input type="checkbox" class="sc-check" data-id="${m.id}" /></td></tr>`
     ).join('');
 }
 
 async function guardarSantaCena() {
     const ahora = new Date();
-    const diaSemana = ahora.getDay();
-    if (diaSemana !== 0) return mostrarNotificacion('La Santa Cena solo se registra los Domingos.', 'error');
-
+    if (ahora.getDay() !== 0) return mostrarNotificacion('La Santa Cena solo se registra los Domingos.', 'error');
     const fecha = ahora.toISOString().split('T')[0];
     const checks = document.querySelectorAll('.sc-check:checked');
     if (!checks.length) return mostrarNotificacion('No hay asistentes seleccionados.', 'error');
-
     for (const check of checks) {
         await fetch(`${API}/api/santacena`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ miembro_id: parseInt(check.dataset.id), fecha: fecha, asistio: true }) });
     }
-    mostrarNotificacion('✅ Registro de Santa Cena guardado con fecha del sistema.', 'exito');
+    mostrarNotificacion('✅ Registro de Santa Cena guardado.', 'exito');
 }
 
-// ==================== NUEVAS FUNCIONES PASTOR/ADMIN ====================
-async function eliminarMiembroAdmin() {
-    const codigo = $('inputEliminarCodigo').value.trim();
-    if (!codigo) return mostrarNotificacion('Ingresa un código válido.', 'error');
-    if (!confirm('¿Estás seguro de eliminar al miembro ' + codigo + '?')) return;
+// ==================== MODAL ELIMINAR (CORREGIDO) ====================
+async function abrirModalEliminar() {
+    document.getElementById('inputEliminarCodigo').value = '';
+    document.getElementById('textoConfirmacionEliminar').innerHTML = 'Cargando información...';
+    document.getElementById('modalEliminar').classList.add('activo');
+}
 
-    const res = await fetch(`${API}/api/miembros/${codigo}`, { method: 'DELETE' });
-    if (res.ok) { mostrarNotificacion('Miembro eliminado.', 'exito'); cerrarModal('modalEliminar'); cargarMiembros(); }
-    else { const err = await res.json(); mostrarNotificacion(err.error, 'error'); }
+async function buscarYEliminar() {
+    const codigo = document.getElementById('inputEliminarCodigo').value.trim();
+    if (!codigo) return mostrarNotificacion('Ingresa un código.', 'error');
+
+    const res = await fetch(`${API}/api/miembros/${codigo}`);
+    if (res.status === 404) {
+        return mostrarNotificacion('El código de miembro ingresado no existe', 'error');
+    }
+    const data = await res.json();
+
+    if (!confirm(`¿Estás seguro que quieres eliminar al hermano ${data.nombre} (Código ${codigo})?`)) return;
+
+    const delRes = await fetch(`${API}/api/miembros/${codigo}`, { method: 'DELETE' });
+    if (delRes.ok) {
+        mostrarNotificacion('Miembro eliminado y códigos reordenados.', 'exito');
+        document.getElementById('modalEliminar').classList.remove('activo');
+        cargarMiembros();
+    } else {
+        const err = await delRes.json();
+        mostrarNotificacion(err.error, 'error');
+    }
+}
+
+// ==================== MODAL ACTUALIZAR (NUEVO) ====================
+async function abrirModalActualizar() {
+    document.getElementById('inputActualizarCodigo').value = '';
+    document.getElementById('formActualizarModal').style.display = 'none';
+    document.getElementById('inputActualizarCodigo').style.display = 'block';
+    document.getElementById('btnBuscarActualizar').style.display = 'inline-block';
+    document.getElementById('btnGuardarActualizar').style.display = 'none';
+    document.getElementById('modalActualizar').classList.add('activo');
+}
+
+async function buscarParaActualizar() {
+    const codigo = document.getElementById('inputActualizarCodigo').value.trim();
+    if (!codigo) return mostrarNotificacion('Ingresa un código.', 'error');
+
+    const res = await fetch(`${API}/api/miembros/${codigo}`);
+    if (res.status === 404) return mostrarNotificacion('El código de miembro ingresado no existe', 'error');
+
+    const data = await res.json();
+    document.getElementById('inputActualizarCodigo').style.display = 'none';
+    document.getElementById('btnBuscarActualizar').style.display = 'none';
+    document.getElementById('btnGuardarActualizar').style.display = 'inline-block';
+    document.getElementById('formActualizarModal').style.display = 'block';
+
+    document.getElementById('m_actualizar_nombre').value = data.nombre.replace(/ \(.*\)/, '');
+    document.getElementById('m_actualizar_telefono').value = data.telefono || '';
+    document.getElementById('m_actualizar_tipo').value = data.tipo;
+    document.getElementById('m_actualizar_grupo').value = data.grupo;
+}
+
+async function guardarActualizacion() {
+    const codigo = document.getElementById('inputActualizarCodigo').value.trim();
+    const datos = {
+        nombre: document.getElementById('m_actualizar_nombre').value.trim(),
+        telefono: document.getElementById('m_actualizar_telefono').value.trim(),
+        tipo: document.getElementById('m_actualizar_tipo').value,
+        grupo: document.getElementById('m_actualizar_grupo').value
+    };
+    if (!datos.nombre) return mostrarNotificacion('El nombre no puede estar vacío.', 'error');
+
+    const res = await fetch(`${API}/api/miembros/${codigo}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(datos) });
+    if (res.ok) {
+        mostrarNotificacion('Información actualizada.', 'exito');
+        document.getElementById('modalActualizar').classList.remove('activo');
+        cargarMiembros();
+    } else {
+        mostrarNotificacion('Error al actualizar.', 'error');
+    }
 }
 
 // ==================== ABRIR/CERRAR MODALES ====================
-const abrirModal = id => $(id).classList.add('activo');
-const cerrarModal = id => $(id).classList.remove('activo');
+const abrirModal = id => document.getElementById(id).classList.add('activo');
+const cerrarModal = id => document.getElementById(id).classList.remove('activo');
+
+function cerrarModalEliminar() { document.getElementById('modalEliminar').classList.remove('activo'); }
+function cerrarModalActualizar() { document.getElementById('modalActualizar').classList.remove('activo'); }

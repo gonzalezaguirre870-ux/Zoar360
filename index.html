@@ -11,7 +11,7 @@
 </head>
 
 <body>
-
+    <!-- SPLASH -->
     <div id="pantallaBienvenida" class="welcome-splash">
         <div class="welcome-content">
             <img src="logoad.png" alt="Logo" class="welcome-logo" />
@@ -21,33 +21,33 @@
         </div>
     </div>
 
+    <!-- LOGIN -->
     <div id="pantallaLogin" class="login-container">
         <div class="login-card">
-            <img src="logoad.png" alt="Logo" class="login-logo" />
-            <h2>Iglesia Zoar</h2>
-            <div class="login-info" style="display:flex; align-items:center; gap:10px;">
-                <i class="fa-solid fa-lock"></i>
-                <div class="login-info-text">
-                    <p>Control de acceso administrativo</p>
+            <div class="login-header">
+                <img src="logoad.png" alt="Logo" class="login-logo" />
+                <div class="login-titles">
+                    <h2>Iglesia Zoar</h2>
+                    <div class="login-icon"><i class="fa-solid fa-lock"></i>Control de Acceso Administrativo</div>
                 </div>
             </div>
             <form id="formLogin" onsubmit="iniciarSesion(event)">
                 <div class="form-group">
-                    <label for="l_email">Correo Electrónico</label>
+                    <label>Correo Electrónico</label>
                     <div class="input-icon"><i class="fa-solid fa-envelope"></i><input type="email" id="l_email"
-                            placeholder="usuario@iglesiazoarsv.org" required /></div>
+                            placeholder="correo@zoar.com" required /></div>
                 </div>
                 <div class="form-group">
-                    <label for="l_pass">Contraseña</label>
+                    <label>Contraseña</label>
                     <div class="input-icon"><i class="fa-solid fa-key"></i><input type="password" id="l_pass"
                             placeholder="••••••••" required /></div>
                 </div>
-                <button type="submit" class="btn-submit"><i class="fa-solid fa-right-to-bracket"></i> Iniciar
-                    Sesión</button>
+                <button type="submit" class="btn-submit"><i class="fa-solid fa-right-to-bracket"></i> Iniciar Sesión</button>
             </form>
         </div>
     </div>
 
+    <!-- APP PRINCIPAL -->
     <div id="appPrincipal" style="display: none;">
         <header class="app-header">
             <button id="btnMenuMovil" class="btn-menu-movil"
@@ -69,6 +69,11 @@
                         <span class="d-label">Correo:</span><span class="d-value" id="correoUsuarioDropdown">---</span>
                         <span class="d-label">Ministerio:</span><span class="d-value" id="rolUsuarioDropdown">---</span>
                         <span class="d-label">Fecha de hoy:</span><span class="d-value" id="fechaDropdown">---</span>
+                        <div
+                            style="margin-top: 10px; border-top: 1px solid #e2e8f0; padding-top: 10px; text-align: center;">
+                            <button class="btn-submit" onclick="cerrarSesion()"
+                                style="padding: 6px 12px; font-size: 0.8rem; background:#ef4444;">Cerrar Sesión</button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -89,8 +94,6 @@
 
                 <button class="btn-about" onclick="abrirModal('modalCreditos')"><i class="fa-solid fa-info-circle"></i>
                     Acerca del Sistema</button>
-                <button class="btn-salir" onclick="cerrarSesion()"><i
-                        class="fa-solid fa-right-from-bracket"></i><span>Cerrar Sesión</span></button>
             </nav>
 
             <main class="contenido">
@@ -104,11 +107,11 @@
                                 <button class="btn-agregar" id="btnAgregarMiembro"
                                     onclick="abrirModal('modalMiembro')"><i class="fa-solid fa-plus"></i> Agregar
                                     Miembro</button>
-                                <button class="btn-submit" style="background:#2563eb; width:auto; padding:10px 18px;"
-                                    id="btnEliminarAdmin" onclick="abrirModal('modalEliminar')"><i
+                                <button class="btn-submit" style="background:#ef4444; width:auto; padding:10px 18px;"
+                                    id="btnEliminarAdmin" onclick="abrirModalEliminar()"><i
                                         class="fa-solid fa-trash"></i> Eliminar Miembro</button>
                                 <button class="btn-submit" style="background:#f59e0b; width:auto; padding:10px 18px;"
-                                    id="btnActualizarAdmin" onclick="abrirModal('modalActualizar')"><i
+                                    id="btnActualizarAdmin" onclick="abrirModalActualizar()"><i
                                         class="fa-solid fa-pen"></i> Actualizar Información</button>
                             </div>
                         </div>
@@ -220,7 +223,7 @@
         </div>
     </div>
 
-    <!-- MODALES -->
+    <!-- MODAL NOTIFICACIÓN -->
     <div id="modalNotificacion" class="modal">
         <div class="modal-content" style="max-width: 400px; text-align: center;">
             <div id="iconoNotificacion" style="font-size: 3rem; margin-bottom: 10px;">⚠️</div>
@@ -231,6 +234,7 @@
         </div>
     </div>
 
+    <!-- MODAL CRÉDITOS -->
     <div id="modalCreditos" class="modal">
         <div class="modal-content" style="max-width: 500px; text-align: center;">
             <span class="modal-close" onclick="cerrarModal('modalCreditos')">&times;</span>
@@ -242,6 +246,7 @@
         </div>
     </div>
 
+    <!-- MODAL MIEMBRO -->
     <div id="modalMiembro" class="modal">
         <div class="modal-content">
             <span class="modal-close" onclick="cerrarModal('modalMiembro')">&times;</span>
@@ -295,15 +300,58 @@
 
     <!-- MODAL ELIMINAR (ADMIN) -->
     <div id="modalEliminar" class="modal">
-        <div class="modal-content" style="max-width: 400px;">
+        <div class="modal-content" style="max-width: 450px;">
             <span class="modal-close" onclick="cerrarModal('modalEliminar')">&times;</span>
             <h3 style="color:#ef4444;"><i class="fa-solid fa-trash"></i> Eliminar Miembro</h3>
-            <div class="form-group"><label>Código del Miembro</label>
+            <div class="form-group">
+                <label>Código del Miembro</label>
                 <div class="input-icon"><i class="fa-solid fa-hashtag"></i><input type="text" id="inputEliminarCodigo"
                         placeholder="Ej: 0001" /></div>
             </div>
-            <button class="btn-submit" style="background:#ef4444;" onclick="eliminarMiembroAdmin()">Eliminar
+            <div id="textoConfirmacionEliminar"
+                style="font-weight:bold; color: #0c4d8e; margin: 10px 0; text-align:center;"></div>
+            <button class="btn-submit" style="background:#ef4444;" onclick="buscarYEliminar()">Eliminar
                 Permanentemente</button>
+        </div>
+    </div>
+
+    <!-- MODAL ACTUALIZAR (ADMIN) -->
+    <div id="modalActualizar" class="modal">
+        <div class="modal-content" style="max-width: 500px;">
+            <span class="modal-close" onclick="cerrarModal('modalActualizar')">&times;</span>
+            <h3 style="color:#f59e0b;"><i class="fa-solid fa-pen"></i> Actualizar Información</h3>
+            <div class="form-group">
+                <label>Código del Miembro</label>
+                <div class="input-icon"><i class="fa-solid fa-hashtag"></i><input type="text" id="inputActualizarCodigo"
+                        placeholder="Ej: 0001" /></div>
+            </div>
+            <button class="btn-submit" style="background:#f59e0b;" onclick="buscarParaActualizar()"
+                id="btnBuscarActualizar">Buscar Miembro</button>
+
+            <div id="formActualizarModal" style="display:none; margin-top: 20px;">
+                <div class="form-grid">
+                    <div class="form-group"><label>Nombre</label>
+                        <div class="input-icon"><i class="fa-solid fa-user"></i><input type="text"
+                                id="m_actualizar_nombre" /></div>
+                    </div>
+                    <div class="form-group"><label>Teléfono</label>
+                        <div class="input-icon"><i class="fa-solid fa-phone"></i><input type="tel"
+                                id="m_actualizar_telefono" /></div>
+                    </div>
+                    <div class="form-group"><label>Tipo</label>
+                        <div class="input-icon"><i class="fa-solid fa-id-card"></i><select id="m_actualizar_tipo">
+                                <option value="Catecumeno">Catecúmeno</option>
+                                <option value="Propiedad">En Propiedad</option>
+                            </select></div>
+                    </div>
+                    <div class="form-group"><label>Grupo</label>
+                        <div class="input-icon"><i class="fa-solid fa-tags"></i><input type="text"
+                                id="m_actualizar_grupo" placeholder="Fraternidad, Exploradores, etc." /></div>
+                    </div>
+                </div>
+                <button class="btn-submit" style="background:#2563eb;" onclick="guardarActualizacion()"
+                    id="btnGuardarActualizar">Guardar Cambios</button>
+            </div>
         </div>
     </div>
 

@@ -15,6 +15,7 @@ def get_db():
     conn.row_factory = sqlite3.Row
     return conn
 
+# ==================== LOGIN Y VALIDACIÓN ====================
 @app.route('/api/login', methods=['POST'])
 def login():
     data = request.json
@@ -24,12 +25,22 @@ def login():
         return jsonify({"message": "Login exitoso", "rol": user['rol'], "email": user['email']}), 200
     return jsonify({"error": "Credenciales incorrectas"}), 401
 
+# ==================== MIEMBROS ====================
 @app.route('/api/miembros', methods=['GET'])
 def obtener_miembros():
     conn = get_db()
     miembros = conn.execute("SELECT * FROM miembros ORDER BY codigo ASC").fetchall()
     conn.close()
     return jsonify([dict(m) for m in miembros])
+
+@app.route('/api/miembros/<codigo>', methods=['GET'])
+def obtener_miembro_por_codigo(codigo):
+    conn = get_db()
+    miembro = conn.execute("SELECT * FROM miembros WHERE codigo = ?", (codigo,)).fetchone()
+    conn.close()
+    if miembro:
+        return jsonify(dict(miembro))
+    return jsonify({"error": "Miembro no encontrado"}), 404
 
 @app.route('/api/miembros', methods=['POST'])
 def crear_miembro():
@@ -39,22 +50,52 @@ def crear_miembro():
     conn = get_db()
     ultimo = conn.execute("SELECT MAX(codigo) as max FROM miembros").fetchone()
     nuevo_codigo = f"{(int(ultimo['max']) + 1) if ultimo and ultimo['max'] else 1:04d}"
+    
     nombre_final = data['nombre'] + (f" ({data['liderazgo']})" if data.get('liderazgo') else "")
-    conn.execute("INSERT INTO miembros (codigo, nombre, telefono, tipo, grupo) VALUES (?, ?, ?, ?, ?)", (nuevo_codigo, nombre_final, data.get('telefono'), data['tipo'], data.get('grupo', 'General')))
+    conn.execute("INSERT INTO miembros (codigo, nombre, telefono, tipo, grupo) VALUES (?, ?, ?, ?, ?)", 
+                 (nuevo_codigo, nombre_final, data.get('telefono'), data['tipo'], data.get('grupo', 'General')))
     conn.commit()
     conn.close()
-    return jsonify({"message": "Miembro creado"}), 201
+    return jsonify({"message": "Miembro creado", "codigo": nuevo_codigo}), 201
 
 @app.route('/api/miembros/<codigo>', methods=['DELETE'])
 def eliminar_miembro(codigo):
     if session.get('user_rol') not in ['Administrador', 'Pastor']:
         return jsonify({"error": "Acceso denegado."}), 403
     conn = get_db()
+    # Verificar si existe antes de borrar
+    miembro = conn.execute("SELECT * FROM miembros WHERE codigo = ?", (codigo,)).fetchone()
+    if not miembro:
+        conn.close()
+        return jsonify({"error": "El código de miembro ingresado no existe"}), 404
+
     conn.execute("DELETE FROM miembros WHERE codigo = ?", (codigo,))
     conn.commit()
+    
+    # REINDEXACIÓN DE CÓDIGOS (Para que no queden huecos)
+    todos = conn.execute("SELECT id, codigo FROM miembros ORDER BY id ASC").fetchall()
+    for index, row in enumerate(todos):
+        nuevo_cod = f"{index + 1:04d}"
+        if row['codigo'] != nuevo_cod:
+            conn.execute("UPDATE miembros SET codigo = ? WHERE id = ?", (nuevo_cod, row['id']))
+    conn.commit()
     conn.close()
-    return jsonify({"message": "Eliminado"}), 200
+    return jsonify({"message": "Miembro eliminado y códigos reordenados"}), 200
 
+@app.route('/api/miembros/<codigo>', methods=['PUT'])
+def actualizar_miembro(codigo):
+    if session.get('user_rol') not in ['Administrador', 'Pastor']:
+        return jsonify({"error": "Acceso denegado."}), 403
+    data = request.json
+    conn = get_db()
+    nombre_final = data['nombre'] + (f" ({data['liderazgo']})" if data.get('liderazgo') else "")
+    conn.execute("UPDATE miembros SET nombre = ?, telefono = ?, tipo = ?, grupo = ? WHERE codigo = ?", 
+                 (nombre_final, data.get('telefono'), data['tipo'], data.get('grupo', 'General'), codigo))
+    conn.commit()
+    conn.close()
+    return jsonify({"message": "Información actualizada"}), 200
+
+# ==================== SOLICITUDES ====================
 @app.route('/api/solicitudes', methods=['POST'])
 def crear_solicitud():
     data = request.json
@@ -89,6 +130,7 @@ def procesar_solicitud(id):
     conn.close()
     return jsonify({"message": "Solicitud procesada"}), 200
 
+# ==================== ASISTENCIA ====================
 @app.route('/api/asistencia/grupo/<grupo>', methods=['GET'])
 def obtener_asistencia_grupo(grupo):
     conn = get_db()
@@ -110,11 +152,13 @@ def marcar_asistencia():
     conn = get_db()
     miembro = conn.execute("SELECT * FROM miembros WHERE codigo = ?", (data['codigo'],)).fetchone()
     if not miembro: return jsonify({"error": "Miembro no encontrado"}), 404
-    conn.execute("INSERT INTO asistencias (miembro_id, fecha, hora) VALUES (?, ?, ?)", (miembro['id'], ahora.strftime('%Y-%m-%d'), ahora.strftime('%H:%M:%S')))
+    conn.execute("INSERT INTO asistencias (miembro_id, fecha, hora) VALUES (?, ?, ?)", 
+                 (miembro['id'], ahora.strftime('%Y-%m-%d'), ahora.strftime('%H:%M:%S')))
     conn.commit()
     conn.close()
     return jsonify({"message": "Asistencia marcada"}), 200
 
+# ==================== SANTA CENA ====================
 @app.route('/api/santacena', methods=['POST'])
 def registrar_santa_cena():
     data = request.json

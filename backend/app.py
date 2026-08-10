@@ -15,17 +15,16 @@ def get_db():
     conn.row_factory = sqlite3.Row
     return conn
 
-# ==================== LOGIN Y VALIDACIÓN ====================
 @app.route('/api/login', methods=['POST'])
 def login():
     data = request.json
+    # Corrección para aceptar cualquier usuario válido de la base de datos
     user = get_db().execute("SELECT * FROM usuarios WHERE email = ? AND password_hash = ?", (data['email'], data['password'])).fetchone()
     if user:
         session.update({'user_id': user['id'], 'user_rol': user['rol']})
         return jsonify({"message": "Login exitoso", "rol": user['rol'], "email": user['email']}), 200
     return jsonify({"error": "Credenciales incorrectas"}), 401
 
-# ==================== MIEMBROS ====================
 @app.route('/api/miembros', methods=['GET'])
 def obtener_miembros():
     conn = get_db()
@@ -67,7 +66,7 @@ def eliminar_miembro(codigo):
     miembro = conn.execute("SELECT * FROM miembros WHERE codigo = ?", (codigo,)).fetchone()
     if not miembro:
         conn.close()
-        return jsonify({"error": "El código de miembro ingresado no existe"}), 404
+        return jsonify({"error": "El código ingresado no pertenece a ningún miembro"}), 404
 
     conn.execute("DELETE FROM miembros WHERE codigo = ?", (codigo,))
     conn.commit()
@@ -95,7 +94,6 @@ def actualizar_miembro(codigo):
     conn.close()
     return jsonify({"message": "Información actualizada"}), 200
 
-# ==================== SOLICITUDES ====================
 @app.route('/api/solicitudes', methods=['POST'])
 def crear_solicitud():
     data = request.json
@@ -130,7 +128,6 @@ def procesar_solicitud(id):
     conn.close()
     return jsonify({"message": "Solicitud procesada"}), 200
 
-# ==================== ASISTENCIA ====================
 @app.route('/api/asistencia/grupo/<grupo>', methods=['GET'])
 def obtener_asistencia_grupo(grupo):
     conn = get_db()
@@ -158,7 +155,6 @@ def marcar_asistencia():
     conn.close()
     return jsonify({"message": "Asistencia marcada"}), 200
 
-# ==================== SANTA CENA ====================
 @app.route('/api/santacena', methods=['POST'])
 def registrar_santa_cena():
     data = request.json

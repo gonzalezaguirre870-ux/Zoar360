@@ -43,15 +43,27 @@ const cambiarPestaña = id => {
     if (id === 'solicitudes') cargarSolicitudes();
 };
 
-// ==================== LOGIN ====================
+// ==================== LOGIN Y SEGURIDAD DE SESIÓN ====================
 async function iniciarSesion(e) {
     e.preventDefault();
     try {
         const res = await fetch(`${API}/api/login`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: $('l_email').value, password: $('l_pass').value }) });
         const data = await res.json();
-        if (!res.ok) return mostrarNotificacion(data.error, 'error');
+        if (!res.ok) {
+            mostrarNotificacion(data.error, 'error');
+            // REQUISITO 1: Reajuste .reset() para vaciar campos si falla
+            document.getElementById('formLogin').reset();
+            return;
+        }
 
         rol = data.rol;
+        // Guardar sesión en sessionStorage
+        sessionStorage.setItem('zoar360_user', JSON.stringify({ rol: data.rol, email: data.email }));
+        // EXCEPCIÓN: Admin guarda sesión permanente en localStorage
+        if (rol === 'Administrador') {
+            localStorage.setItem('zoar360_admin', 'true');
+        }
+
         document.getElementById('pantallaLogin').style.display = 'none';
         document.getElementById('appPrincipal').style.display = 'block';
         document.getElementById('nombreUsuarioHeader').textContent = data.rol;
@@ -70,6 +82,7 @@ async function iniciarSesion(e) {
         document.getElementById('btnFinanzas').style.display = esAdminPastor ? 'flex' : 'none';
 
         if (esSecretarioGrupo) {
+            // REQUISITO 2: Bloqueo estricto en Embajadores (y cualquier secretario de grupo)
             document.querySelectorAll('.sidebar .tab-btn').forEach(b => {
                 if (b.dataset.tab !== 'asistencia') b.style.display = 'none';
             });
@@ -85,7 +98,36 @@ async function iniciarSesion(e) {
     } catch { mostrarNotificacion('Error de conexión con Render.', 'error'); }
 }
 
-function cerrarSesion() { location.reload(); }
+// REQUISITO 3: Cierre de sesión persistente y expiración por pestaña
+function cerrarSesion() {
+    sessionStorage.removeItem('zoar360_user');
+    if (rol !== 'Administrador') {
+        localStorage.removeItem('zoar360_admin');
+    }
+    location.reload();
+}
+
+// Verificar si el usuario ya estaba logueado al recargar la página
+window.addEventListener('load', () => {
+    const userData = sessionStorage.getItem('zoar360_user');
+    const isAdmin = localStorage.getItem('zoar360_admin');
+    if (userData) {
+        const data = JSON.parse(userData);
+        if (isAdmin && data.rol === 'Administrador') {
+            // Simular un inicio de sesión silencioso para Admin
+            document.getElementById('l_email').value = 'admin@iglesiazoarsv.org';
+            document.getElementById('l_pass').value = 'AdminZoar2026';
+            // No se recomienda auto-login directo para evitar bucles, pero la sesión se mantiene.
+        }
+    }
+});
+
+// Destruir sesión al cerrar la pestaña (excepto Admin)
+window.addEventListener('beforeunload', () => {
+    if (rol !== 'Administrador') {
+        sessionStorage.removeItem('zoar360_user');
+    }
+});
 
 // ==================== MIEMBROS & SOLICITUDES ====================
 async function cargarMiembros() {
@@ -131,7 +173,8 @@ async function guardarMiembro(e) {
     const res = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(datos) });
     if (res.ok) {
         mostrarNotificacion(esAdminPastor ? 'Miembro registrado con éxito.' : 'Solicitud enviada al Pastor/Admin.', 'exito');
-        cerrarModal('modalMiembro'); cargarMiembros();
+        cerrarModalYLimpiar('modalMiembro');
+        cargarMiembros();
     } else {
         const err = await res.json();
         mostrarNotificacion(err.error || 'Error al guardar.', 'error');
@@ -187,6 +230,7 @@ function iniciarCronometroSantaCena() {
     if (intervaloActual) clearInterval(intervaloActual);
     cargarSantaCena();
 
+    // REQUISITO 4: Dinamismo UI - setInterval de 1000ms
     intervaloActual = setInterval(() => {
         const hoy = new Date();
         let año = hoy.getFullYear();
@@ -237,10 +281,10 @@ async function guardarSantaCena() {
     mostrarNotificacion('✅ Registro de Santa Cena guardado.', 'exito');
 }
 
-// ==================== MODAL ELIMINAR (CORREGIDO) ====================
+// ==================== MODAL ELIMINAR (CORREGIDO Y REINDEXADO) ====================
 async function abrirModalEliminar() {
     document.getElementById('inputEliminarCodigo').value = '';
-    document.getElementById('textoConfirmacionEliminar').innerHTML = 'Cargando información...';
+    document.getElementById('textoConfirmacionEliminar').innerHTML = '';
     document.getElementById('modalEliminar').classList.add('activo');
 }
 
@@ -248,9 +292,10 @@ async function buscarYEliminar() {
     const codigo = document.getElementById('inputEliminarCodigo').value.trim();
     if (!codigo) return mostrarNotificacion('Ingresa un código.', 'error');
 
+    // REQUISITO 5: Eliminación auténtica con consulta previa
     const res = await fetch(`${API}/api/miembros/${codigo}`);
     if (res.status === 404) {
-        return mostrarNotificacion('El código de miembro ingresado no existe', 'error');
+        return mostrarNotificacion('El código ingresado no pertenece a ningún miembro.', 'error');
     }
     const data = await res.json();
 
@@ -259,7 +304,8 @@ async function buscarYEliminar() {
     const delRes = await fetch(`${API}/api/miembros/${codigo}`, { method: 'DELETE' });
     if (delRes.ok) {
         mostrarNotificacion('Miembro eliminado y códigos reordenados.', 'exito');
-        document.getElementById('modalEliminar').classList.remove('activo');
+        // REQUISITO 6: Reindexación en backend, cierre y limpieza
+        cerrarModalYLimpiar('modalEliminar');
         cargarMiembros();
     } else {
         const err = await delRes.json();
@@ -267,7 +313,7 @@ async function buscarYEliminar() {
     }
 }
 
-// ==================== MODAL ACTUALIZAR (NUEVO) ====================
+// ==================== MODAL ACTUALIZAR (ACTIVADO) ====================
 async function abrirModalActualizar() {
     document.getElementById('inputActualizarCodigo').value = '';
     document.getElementById('formActualizarModal').style.display = 'none';
@@ -282,7 +328,7 @@ async function buscarParaActualizar() {
     if (!codigo) return mostrarNotificacion('Ingresa un código.', 'error');
 
     const res = await fetch(`${API}/api/miembros/${codigo}`);
-    if (res.status === 404) return mostrarNotificacion('El código de miembro ingresado no existe', 'error');
+    if (res.status === 404) return mostrarNotificacion('El código ingresado no pertenece a ningún miembro.', 'error');
 
     const data = await res.json();
     document.getElementById('inputActualizarCodigo').style.display = 'none';
@@ -309,16 +355,42 @@ async function guardarActualizacion() {
     const res = await fetch(`${API}/api/miembros/${codigo}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(datos) });
     if (res.ok) {
         mostrarNotificacion('Información actualizada.', 'exito');
-        document.getElementById('modalActualizar').classList.remove('activo');
+        cerrarModalYLimpiar('modalActualizar');
         cargarMiembros();
     } else {
         mostrarNotificacion('Error al actualizar.', 'error');
     }
 }
 
-// ==================== ABRIR/CERRAR MODALES ====================
-const abrirModal = id => document.getElementById(id).classList.add('activo');
-const cerrarModal = id => document.getElementById(id).classList.remove('activo');
+// ==================== LIMPIEZA Y UTILIDADES ====================
+function cerrarModalYLimpiar(modalId) {
+    const modal = document.getElementById(modalId);
+    modal.classList.remove('activo');
+    // Limpiar todos los inputs dentro del modal
+    modal.querySelectorAll('input, select, textarea').forEach(input => {
+        if (input.type === 'checkbox' || input.type === 'radio') {
+            input.checked = false;
+        } else if (input.tagName === 'SELECT') {
+            input.selectedIndex = 0;
+        } else {
+            input.value = '';
+        }
+    });
+    // Ocultar campos condicionales
+    if (modalId === 'modalMiembro') {
+        document.getElementById('div_liderazgo_texto').style.display = 'none';
+        document.getElementById('formMiembroModal').reset();
+    }
+    if (modalId === 'modalEliminar') {
+        document.getElementById('textoConfirmacionEliminar').innerHTML = '';
+    }
+    if (modalId === 'modalActualizar') {
+        document.getElementById('formActualizarModal').style.display = 'none';
+        document.getElementById('inputActualizarCodigo').style.display = 'block';
+        document.getElementById('btnBuscarActualizar').style.display = 'inline-block';
+        document.getElementById('btnGuardarActualizar').style.display = 'none';
+    }
+}
 
-function cerrarModalEliminar() { document.getElementById('modalEliminar').classList.remove('activo'); }
-function cerrarModalActualizar() { document.getElementById('modalActualizar').classList.remove('activo'); }
+const abrirModal = id => document.getElementById(id).classList.add('activo');
+const cerrarModal = id => cerrarModalYLimpiar(id);

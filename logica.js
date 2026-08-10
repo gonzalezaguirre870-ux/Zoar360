@@ -20,12 +20,13 @@ function cambiarTema() {
     document.getElementById('btnTema').innerHTML = esModoOscuro ? '<i class="fa-solid fa-sun"></i>' : '<i class="fa-solid fa-moon"></i>';
 }
 
-// ==================== NAVEGACIÓN ====================
+// ==================== NAVEGACIÓN (Privilegios y Eventos eliminados) ====================
 document.addEventListener('DOMContentLoaded', () => {
     document.querySelectorAll('.sidebar .tab-btn').forEach(btn => {
-        btn.addEventListener('click', function () {
+        btn.addEventListener('click', function() {
             const targetId = this.dataset.tab;
-            if (targetId === 'finanzas' && rol === 'Secretario_General') {
+            if(targetId === 'finanzas' && rol === 'Secretario_General') {
+                // MODAL DE CLAVE ADMIN PARA FINANZAS (Se puede añadir en futura versión)
                 return mostrarNotificacion('Módulo de Finanzas en desarrollo.', 'info');
             }
             cambiarPestaña(targetId);
@@ -37,42 +38,33 @@ const cambiarPestaña = id => {
     document.querySelectorAll('.tab-content, .sidebar .tab-btn').forEach(el => el.classList.remove('active'));
     document.getElementById(id).classList.add('active');
     document.querySelector(`.tab-btn[data-tab="${id}"]`).classList.add('active');
-    if (id === 'membresia') cargarMiembros();
-    if (id === 'asistencia') cargarAsistencia();
-    if (id === 'santacena') iniciarCronometroSantaCena();
-    if (id === 'solicitudes') cargarSolicitudes();
+    if(id === 'membresia') cargarMiembros();
+    if(id === 'asistencia') cargarAsistencia();
+    if(id === 'santacena') iniciarCronometroSantaCena();
+    if(id === 'solicitudes') cargarSolicitudes();
 };
 
 // ==================== LOGIN Y SEGURIDAD DE SESIÓN ====================
 async function iniciarSesion(e) {
     e.preventDefault();
     try {
-        const res = await fetch(`${API}/api/login`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: $('l_email').value, password: $('l_pass').value }) });
+        const res = await fetch(`${API}/api/login`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({email:$('l_email').value, password:$('l_pass').value}) });
         const data = await res.json();
-        if (!res.ok) {
+        if(!res.ok) {
             mostrarNotificacion(data.error, 'error');
-            // REQUISITO 1: Reajuste .reset() para vaciar campos si falla
             document.getElementById('formLogin').reset();
             return;
         }
-
+        
         rol = data.rol;
-        // Guardar sesión en sessionStorage
-        sessionStorage.setItem('zoar360_user', JSON.stringify({ rol: data.rol, email: data.email }));
-        // EXCEPCIÓN: Admin guarda sesión permanente en localStorage
-        if (rol === 'Administrador') {
-            localStorage.setItem('zoar360_admin', 'true');
-        }
+        sessionStorage.setItem('zoar360_user', JSON.stringify({rol: data.rol, email: data.email}));
+        if (rol === 'Administrador') localStorage.setItem('zoar360_admin', 'true');
 
         document.getElementById('pantallaLogin').style.display = 'none';
         document.getElementById('appPrincipal').style.display = 'block';
         document.getElementById('nombreUsuarioHeader').textContent = data.rol;
-
-        const fechaHoy = new Date().toLocaleDateString('es-ES', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
-        document.getElementById('fechaHeader').textContent = fechaHoy;
         document.getElementById('correoUsuarioDropdown').textContent = data.email;
         document.getElementById('rolUsuarioDropdown').textContent = data.rol;
-        document.getElementById('fechaDropdown').textContent = fechaHoy;
 
         const esAdminPastor = (rol === 'Administrador' || rol === 'Pastor');
         const esSecretarioGrupo = rol.startsWith('Secretario_') && rol !== 'Secretario_General';
@@ -80,12 +72,13 @@ async function iniciarSesion(e) {
         document.querySelectorAll('.sidebar .tab-btn').forEach(b => b.style.display = 'flex');
         document.getElementById('btnSolicitudes').style.display = esAdminPastor ? 'flex' : 'none';
         document.getElementById('btnFinanzas').style.display = esAdminPastor ? 'flex' : 'none';
+        document.getElementById('btnPrivilegios').style.display = 'none'; // Eliminado visualmente en V1.0
+        document.getElementById('btnEventos').style.display = 'none';     // Eliminado visualmente en V1.0
 
         if (esSecretarioGrupo) {
-            // REQUISITO 2: Bloqueo estricto en Embajadores (y cualquier secretario de grupo)
-            document.querySelectorAll('.sidebar .tab-btn').forEach(b => {
-                if (b.dataset.tab !== 'asistencia') b.style.display = 'none';
-            });
+            // Eliminar Membresía y Santa Cena del menú para grupos
+            document.getElementById('btnMembresia').style.display = 'none';
+            document.getElementById('btnSantaCena').style.display = 'none';
             document.getElementById('btnEliminarAdmin').style.display = 'none';
             document.getElementById('btnActualizarAdmin').style.display = 'none';
             cambiarPestaña('asistencia');
@@ -98,34 +91,21 @@ async function iniciarSesion(e) {
     } catch { mostrarNotificacion('Error de conexión con Render.', 'error'); }
 }
 
-// REQUISITO 3: Cierre de sesión persistente y expiración por pestaña
+// ==================== CIERRE DE SESIÓN SEGURO ====================
 function cerrarSesion() {
     sessionStorage.removeItem('zoar360_user');
-    if (rol !== 'Administrador') {
-        localStorage.removeItem('zoar360_admin');
-    }
-    location.reload();
+    if (rol !== 'Administrador') localStorage.removeItem('zoar360_admin');
+    window.location.href = window.location.href;
 }
 
-// Verificar si el usuario ya estaba logueado al recargar la página
-window.addEventListener('load', () => {
-    const userData = sessionStorage.getItem('zoar360_user');
-    const isAdmin = localStorage.getItem('zoar360_admin');
-    if (userData) {
-        const data = JSON.parse(userData);
-        if (isAdmin && data.rol === 'Administrador') {
-            // Simular un inicio de sesión silencioso para Admin
-            document.getElementById('l_email').value = 'admin@iglesiazoarsv.org';
-            document.getElementById('l_pass').value = 'AdminZoar2026';
-            // No se recomienda auto-login directo para evitar bucles, pero la sesión se mantiene.
-        }
-    }
-});
-
-// Destruir sesión al cerrar la pestaña (excepto Admin)
+// Seguridad exclusiva: Redirección al Login al perder el foco o cerrar pestaña
 window.addEventListener('beforeunload', () => {
-    if (rol !== 'Administrador') {
+    if (rol !== 'Administrador') sessionStorage.removeItem('zoar360_user');
+});
+document.addEventListener('visibilitychange', () => {
+    if (document.hidden && rol !== 'Administrador') {
         sessionStorage.removeItem('zoar360_user');
+        window.location.href = window.location.href;
     }
 });
 
@@ -133,8 +113,8 @@ window.addEventListener('beforeunload', () => {
 async function cargarMiembros() {
     const res = await fetch(`${API}/api/miembros`);
     const lista = await res.json();
-    document.getElementById('tablaMiembros').innerHTML = lista.map(m =>
-        `<tr><td><strong>${m.codigo}</strong></td><td>${m.nombre}</td><td>${m.telefono || '---'}</td><td><span class="badge badge-propiedad">${m.tipo}</span></td><td>${m.grupo}</td></tr>`
+    document.getElementById('tablaMiembros').innerHTML = lista.map(m => 
+        `<tr><td><strong>${m.codigo}</strong></td><td>${m.nombre}</td><td>${m.telefono||'---'}</td><td><span class="badge badge-propiedad">${m.tipo}</span></td><td>${m.grupo}</td></tr>`
     ).join('');
 }
 
@@ -146,18 +126,18 @@ function toggleLiderazgo() {
 async function guardarMiembro(e) {
     e.preventDefault();
     const nombre = document.getElementById('m_nombre').value.trim();
-    if (!nombre) return mostrarNotificacion('El nombre no puede estar vacío.', 'error');
-
+    if(!nombre) return mostrarNotificacion('El nombre no puede estar vacío.', 'error');
+    
     const liderazgoSi = document.getElementById('m_liderazgo_si').value === 'Si';
     const liderazgoTexto = document.getElementById('m_liderazgo_texto').value.trim();
-    if (liderazgoSi && !liderazgoTexto) return mostrarNotificacion('Debes especificar el liderazgo.', 'error');
+    if(liderazgoSi && !liderazgoTexto) return mostrarNotificacion('Debes especificar el liderazgo.', 'error');
 
     let grupos = [];
-    if (document.getElementById('g_femenil').checked) grupos.push('Concilio Misionero Femenil');
-    if (document.getElementById('g_misioneritas').checked) grupos.push('Misioneritas');
-    if (document.getElementById('g_varones').checked) grupos.push('Fraternidad de Varones');
-    if (document.getElementById('g_exploradores').checked) grupos.push('Exploradores del Rey');
-    if (document.getElementById('g_embajadores').checked) grupos.push('Embajadores de Cristo');
+    if(document.getElementById('g_femenil').checked) grupos.push('Concilio Misionero Femenil');
+    if(document.getElementById('g_misioneritas').checked) grupos.push('Misioneritas');
+    if(document.getElementById('g_varones').checked) grupos.push('Fraternidad de Varones');
+    if(document.getElementById('g_exploradores').checked) grupos.push('Exploradores del Rey');
+    if(document.getElementById('g_embajadores').checked) grupos.push('Embajadores de Cristo');
 
     const datos = {
         nombre: nombre,
@@ -169,9 +149,9 @@ async function guardarMiembro(e) {
 
     const esAdminPastor = (rol === 'Administrador' || rol === 'Pastor');
     const url = esAdminPastor ? `${API}/api/miembros` : `${API}/api/solicitudes`;
-
-    const res = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(datos) });
-    if (res.ok) {
+    
+    const res = await fetch(url, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(datos) });
+    if(res.ok) {
         mostrarNotificacion(esAdminPastor ? 'Miembro registrado con éxito.' : 'Solicitud enviada al Pastor/Admin.', 'exito');
         cerrarModalYLimpiar('modalMiembro');
         cargarMiembros();
@@ -188,7 +168,7 @@ async function cargarSolicitudes() {
 }
 
 async function procesarSolicitud(id, estado) {
-    await fetch(`${API}/api/solicitudes/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ estado: estado }) });
+    await fetch(`${API}/api/solicitudes/${id}`, { method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify({estado: estado}) });
     mostrarNotificacion('Solicitud procesada.', 'exito');
     cargarSolicitudes(); cargarMiembros();
 }
@@ -196,62 +176,57 @@ async function procesarSolicitud(id, estado) {
 // ==================== ASISTENCIA ====================
 async function cargarAsistencia() {
     const ahora = new Date();
-    const dias = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+    const dias = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
     const dia = dias[ahora.getDay()];
-    const mapa = { 'Martes': 'Concilio Misionero Femenil', 'Miércoles': 'Misioneritas', 'Jueves': 'Fraternidad de Varones', 'Viernes': 'Exploradores del Rey', 'Sábado': 'Embajadores de Cristo', 'Domingo': 'Culto General' };
+    const mapa = {'Martes':'Concilio Misionero Femenil','Miércoles':'Misioneritas','Jueves':'Fraternidad de Varones','Viernes':'Exploradores del Rey','Sábado':'Embajadores de Cristo','Domingo':'Culto General'};
     let grupo = mapa[dia] || '';
     document.getElementById('diaActual').textContent = dia;
     document.getElementById('grupoActual').textContent = grupo || 'Sin culto hoy';
-    if (!grupo) return document.getElementById('tablaAsistencia').innerHTML = "<tr><td colspan='5'>Hoy no hay culto.</td></tr>";
+    if(!grupo) return document.getElementById('tablaAsistencia').innerHTML = "<tr><td colspan='5'>Hoy no hay culto.</td></tr>";
 
     let endpoint = (rol.startsWith('Secretario_') && rol !== 'Secretario_General') ? `${API}/api/asistencia/grupo/${grupo}` : `${API}/api/miembros`;
     const res = await fetch(endpoint);
     const lista = await res.json();
-    document.getElementById('tablaAsistencia').innerHTML = lista.map(m =>
+    document.getElementById('tablaAsistencia').innerHTML = lista.map(m => 
         `<tr><td>${m.codigo}</td><td>${m.nombre}</td><td>${m.grupo}</td><td><input type="checkbox" class="asistencia-check" data-id="${m.id}" /></td><td><strong>${m.total_asistencias || 0}</strong></td></tr>`
     ).join('');
 }
 
 async function guardarAsistencia() {
     const checks = document.querySelectorAll('.asistencia-check:checked');
-    if (!checks.length) return mostrarNotificacion('Selecciona al menos un miembro.', 'error');
+    if(!checks.length) return mostrarNotificacion('Selecciona al menos un miembro.', 'error');
     for (const check of checks) {
         const codigo = check.closest('tr').querySelector('td:first-child').innerText.trim();
-        await fetch(`${API}/api/marcar-asistencia`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ codigo }) });
+        const res = await fetch(`${API}/api/marcar-asistencia`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({codigo}) });
+        if(!res.ok) {
+            const data = await res.json();
+            // Capturar error de horario del servidor (controlado en el backend)
+            return mostrarNotificacion(data.error || 'Error al guardar.', 'error');
+        }
     }
     mostrarNotificacion('✅ Asistencias guardadas.', 'exito');
     cargarAsistencia();
 }
 
-// ==================== SANTA CENA (CRONÓMETRO VIVO) ====================
+// ==================== SANTA CENA ====================
 let intervaloActual = null;
-
 function iniciarCronometroSantaCena() {
-    if (intervaloActual) clearInterval(intervaloActual);
+    if(intervaloActual) clearInterval(intervaloActual);
     cargarSantaCena();
-
-    // REQUISITO 4: Dinamismo UI - setInterval de 1000ms
     intervaloActual = setInterval(() => {
         const hoy = new Date();
-        let año = hoy.getFullYear();
-        let mes = hoy.getMonth();
+        let año = hoy.getFullYear(); let mes = hoy.getMonth();
         let primerDiaMes = new Date(año, mes, 1);
         let primerDomingo = 1 + ((7 - primerDiaMes.getDay()) % 7);
         let fechaSantaCena = new Date(año, mes, primerDomingo);
-
         if (hoy > fechaSantaCena) {
-            mes++;
-            if (mes > 11) { mes = 0; año++; }
+            mes++; if (mes > 11) { mes = 0; año++; }
             primerDiaMes = new Date(año, mes, 1);
             primerDomingo = 1 + ((7 - primerDiaMes.getDay()) % 7);
             fechaSantaCena = new Date(año, mes, primerDomingo);
         }
-
         const diferencia = fechaSantaCena - hoy;
-        if (diferencia <= 0) {
-            document.getElementById('cronometroSantaCena').innerHTML = `<span style="color:#22c55e;">¡Hoy es el día!</span>`;
-            return;
-        }
+        if (diferencia <= 0) { document.getElementById('cronometroSantaCena').innerHTML = `<span style="color:#22c55e;">¡Hoy es el día!</span>`; return; }
         const dias = Math.floor(diferencia / (1000 * 60 * 60 * 24));
         const horas = Math.floor((diferencia % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
         const minutos = Math.floor((diferencia % (1000 * 60 * 60)) / (1000 * 60));
@@ -264,7 +239,7 @@ async function cargarSantaCena() {
     const res = await fetch(`${API}/api/miembros`);
     const lista = await res.json();
     const filtrados = lista.filter(m => m.tipo === 'Propiedad');
-    document.getElementById('tablaSantaCena').innerHTML = filtrados.map(m =>
+    document.getElementById('tablaSantaCena').innerHTML = filtrados.map(m => 
         `<tr><td><strong>${m.codigo}</strong></td><td>${m.nombre}</td><td><input type="checkbox" class="sc-check" data-id="${m.id}" /></td></tr>`
     ).join('');
 }
@@ -274,74 +249,55 @@ async function guardarSantaCena() {
     if (ahora.getDay() !== 0) return mostrarNotificacion('La Santa Cena solo se registra los Domingos.', 'error');
     const fecha = ahora.toISOString().split('T')[0];
     const checks = document.querySelectorAll('.sc-check:checked');
-    if (!checks.length) return mostrarNotificacion('No hay asistentes seleccionados.', 'error');
+    if(!checks.length) return mostrarNotificacion('No hay asistentes seleccionados.', 'error');
     for (const check of checks) {
-        await fetch(`${API}/api/santacena`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ miembro_id: parseInt(check.dataset.id), fecha: fecha, asistio: true }) });
+        await fetch(`${API}/api/santacena`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({miembro_id: parseInt(check.dataset.id), fecha: fecha, asistio: true}) });
     }
     mostrarNotificacion('✅ Registro de Santa Cena guardado.', 'exito');
 }
 
-// ==================== MODAL ELIMINAR (CORREGIDO Y REINDEXADO) ====================
+// ==================== MODALES Y ADMIN ====================
 async function abrirModalEliminar() {
-    document.getElementById('inputEliminarCodigo').value = '';
-    document.getElementById('textoConfirmacionEliminar').innerHTML = '';
+    document.getElementById('inputEliminarCodigo').value = ''; document.getElementById('textoConfirmacionEliminar').innerHTML = '';
     document.getElementById('modalEliminar').classList.add('activo');
 }
-
 async function buscarYEliminar() {
     const codigo = document.getElementById('inputEliminarCodigo').value.trim();
-    if (!codigo) return mostrarNotificacion('Ingresa un código.', 'error');
-
-    // REQUISITO 5: Eliminación auténtica con consulta previa
+    if(!codigo) return mostrarNotificacion('Ingresa un código.', 'error');
     const res = await fetch(`${API}/api/miembros/${codigo}`);
-    if (res.status === 404) {
-        return mostrarNotificacion('El código ingresado no pertenece a ningún miembro.', 'error');
-    }
+    if(res.status === 404) return mostrarNotificacion('El código ingresado no pertenece a ningún miembro.', 'error');
     const data = await res.json();
-
-    if (!confirm(`¿Estás seguro que quieres eliminar al hermano ${data.nombre} (Código ${codigo})?`)) return;
-
-    const delRes = await fetch(`${API}/api/miembros/${codigo}`, { method: 'DELETE' });
-    if (delRes.ok) {
+    if(!confirm(`¿Estás seguro que quieres eliminar al hermano ${data.nombre} (Código ${codigo})?`)) return;
+    const delRes = await fetch(`${API}/api/miembros/${codigo}`, { method:'DELETE' });
+    if(delRes.ok) {
         mostrarNotificacion('Miembro eliminado y códigos reordenados.', 'exito');
-        // REQUISITO 6: Reindexación en backend, cierre y limpieza
         cerrarModalYLimpiar('modalEliminar');
         cargarMiembros();
-    } else {
-        const err = await delRes.json();
-        mostrarNotificacion(err.error, 'error');
-    }
+    } else { const err = await delRes.json(); mostrarNotificacion(err.error, 'error'); }
 }
 
-// ==================== MODAL ACTUALIZAR (ACTIVADO) ====================
 async function abrirModalActualizar() {
-    document.getElementById('inputActualizarCodigo').value = '';
-    document.getElementById('formActualizarModal').style.display = 'none';
+    document.getElementById('inputActualizarCodigo').value = ''; document.getElementById('formActualizarModal').style.display = 'none';
     document.getElementById('inputActualizarCodigo').style.display = 'block';
     document.getElementById('btnBuscarActualizar').style.display = 'inline-block';
     document.getElementById('btnGuardarActualizar').style.display = 'none';
     document.getElementById('modalActualizar').classList.add('activo');
 }
-
 async function buscarParaActualizar() {
     const codigo = document.getElementById('inputActualizarCodigo').value.trim();
-    if (!codigo) return mostrarNotificacion('Ingresa un código.', 'error');
-
+    if(!codigo) return mostrarNotificacion('Ingresa un código.', 'error');
     const res = await fetch(`${API}/api/miembros/${codigo}`);
-    if (res.status === 404) return mostrarNotificacion('El código ingresado no pertenece a ningún miembro.', 'error');
-
+    if(res.status === 404) return mostrarNotificacion('El código ingresado no pertenece a ningún miembro.', 'error');
     const data = await res.json();
     document.getElementById('inputActualizarCodigo').style.display = 'none';
     document.getElementById('btnBuscarActualizar').style.display = 'none';
     document.getElementById('btnGuardarActualizar').style.display = 'inline-block';
     document.getElementById('formActualizarModal').style.display = 'block';
-
     document.getElementById('m_actualizar_nombre').value = data.nombre.replace(/ \(.*\)/, '');
     document.getElementById('m_actualizar_telefono').value = data.telefono || '';
     document.getElementById('m_actualizar_tipo').value = data.tipo;
     document.getElementById('m_actualizar_grupo').value = data.grupo;
 }
-
 async function guardarActualizacion() {
     const codigo = document.getElementById('inputActualizarCodigo').value.trim();
     const datos = {
@@ -350,40 +306,26 @@ async function guardarActualizacion() {
         tipo: document.getElementById('m_actualizar_tipo').value,
         grupo: document.getElementById('m_actualizar_grupo').value
     };
-    if (!datos.nombre) return mostrarNotificacion('El nombre no puede estar vacío.', 'error');
-
-    const res = await fetch(`${API}/api/miembros/${codigo}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(datos) });
-    if (res.ok) {
-        mostrarNotificacion('Información actualizada.', 'exito');
-        cerrarModalYLimpiar('modalActualizar');
-        cargarMiembros();
-    } else {
-        mostrarNotificacion('Error al actualizar.', 'error');
-    }
+    if(!datos.nombre) return mostrarNotificacion('El nombre no puede estar vacío.', 'error');
+    const res = await fetch(`${API}/api/miembros/${codigo}`, { method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify(datos) });
+    if(res.ok) { mostrarNotificacion('Información actualizada.', 'exito'); cerrarModalYLimpiar('modalActualizar'); cargarMiembros(); } 
+    else { mostrarNotificacion('Error al actualizar.', 'error'); }
 }
 
 // ==================== LIMPIEZA Y UTILIDADES ====================
 function cerrarModalYLimpiar(modalId) {
     const modal = document.getElementById(modalId);
     modal.classList.remove('activo');
-    // Limpiar todos los inputs dentro del modal
     modal.querySelectorAll('input, select, textarea').forEach(input => {
-        if (input.type === 'checkbox' || input.type === 'radio') {
-            input.checked = false;
-        } else if (input.tagName === 'SELECT') {
-            input.selectedIndex = 0;
-        } else {
-            input.value = '';
-        }
+        if (input.type === 'checkbox' || input.type === 'radio') input.checked = false;
+        else if (input.tagName === 'SELECT') input.selectedIndex = 0;
+        else input.value = '';
     });
-    // Ocultar campos condicionales
     if (modalId === 'modalMiembro') {
         document.getElementById('div_liderazgo_texto').style.display = 'none';
         document.getElementById('formMiembroModal').reset();
     }
-    if (modalId === 'modalEliminar') {
-        document.getElementById('textoConfirmacionEliminar').innerHTML = '';
-    }
+    if (modalId === 'modalEliminar') document.getElementById('textoConfirmacionEliminar').innerHTML = '';
     if (modalId === 'modalActualizar') {
         document.getElementById('formActualizarModal').style.display = 'none';
         document.getElementById('inputActualizarCodigo').style.display = 'block';
@@ -391,6 +333,5 @@ function cerrarModalYLimpiar(modalId) {
         document.getElementById('btnGuardarActualizar').style.display = 'none';
     }
 }
-
 const abrirModal = id => document.getElementById(id).classList.add('activo');
 const cerrarModal = id => cerrarModalYLimpiar(id);

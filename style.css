@@ -743,3 +743,143 @@ body.modo-oscuro .badge-propiedad {
 body.modo-oscuro .asistencia-info {
     background: #1e293b;
 }
+
+/* ============================================================
+   CORRECCIÓN DE Z-INDEX Y CAPAS (PARA ALERTAS Y MODALES)
+   ============================================================ */
+.modal {
+    /* Aseguramos que los modales tengan prioridad alta */
+    z-index: 1000 !important;
+}
+
+#modalNotificacion {
+    /* ¡La alerta personalizada debe estar por ENCIMA de todo! */
+    z-index: 2000 !important;
+    display: none;
+    /* Por defecto oculta */
+}
+
+#modalNotificacion.activo {
+    display: flex;
+    /* Se muestra cuando se activa */
+}
+
+/* ============================================================
+   MODO OSCURO - CONTRASTE TOTAL DE TEXTOS Y LABELS
+   ============================================================ */
+body.modo-oscuro {
+    --fondo: #0f172a;
+    --card-bg: #1e293b;
+    --borde: #334155;
+    --texto-oscuro: #f1f5f9;
+    /* Cambia TODOS los textos a blanco/gris claro */
+    --texto-gris: #94a3b8;
+}
+
+body.modo-oscuro .input-icon {
+    background: #0f172a;
+}
+
+body.modo-oscuro .input-icon input,
+body.modo-oscuro .input-icon select {
+    color: #f1f5f9;
+}
+
+body.modo-oscuro .form-group label,
+body.modo-oscuro p,
+body.modo-oscuro .card h2,
+body.modo-oscuro .card h3,
+body.modo-oscuro .modal-content h2,
+body.modo-oscuro .modal-content h3,
+body.modo-oscuro .modal-content p,
+body.modo-oscuro .modal-content label {
+    color: #f1f5f9 !important;
+}
+
+body.modo-oscuro .dropdown-menu {
+    background: #1e293b;
+    color: #f1f5f9;
+    border: 1px solid #334155;
+}
+
+body.modo-oscuro .dropdown-menu .d-value {
+    color: #94a3b8;
+}
+
+body.modo-oscuro .login-card {
+    background: #1e293b;
+    color: #f1f5f9;
+}
+
+body.modo-oscuro .login-card h2 {
+    color: #f1f5f9;
+}
+
+body.modo-oscuro .modal-content {
+    background: #1e293b;
+    color: #f1f5f9;
+}
+
+body.modo-oscuro thead th {
+    background: #334155;
+    color: #f1f5f9;
+}
+
+body.modo-oscuro tbody td {
+    color: #f1f5f9;
+}
+
+body.modo-oscuro .input-icon input::placeholder {
+    color: #94a3b8;
+}
+
+/* ============================================================
+   DROPDOWN DEL PERFIL (FLECHA ACTIVA)
+   ============================================================ */
+.header-user {
+    position: relative;
+    cursor: pointer;
+}
+
+.header-user.abierto .dropdown-menu {
+    display: block;
+}
+
+.dropdown-menu {
+    display: none;
+    position: absolute;
+    top: 110%;
+    right: 0;
+    background: #fff;
+    color: #1e293b;
+    border-radius: 12px;
+    padding: 15px 20px;
+    min-width: 200px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+    z-index: 999;
+    text-align: left;
+}
+
+.dropdown-menu .d-label {
+    font-weight: 600;
+    display: block;
+    margin-top: 5px;
+    color: #0c4d8e;
+}
+
+.dropdown-menu .d-value {
+    color: #64748b;
+    display: block;
+    margin-bottom: 8px;
+}
+
+.dropdown-menu .btn-cerrar-dropdown {
+    margin-top: 10px;
+    width: 100%;
+    padding: 8px;
+    background: #ef4444;
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+}

@@ -20,14 +20,20 @@ function cambiarTema() {
     document.getElementById('btnTema').innerHTML = esModoOscuro ? '<i class="fa-solid fa-sun"></i>' : '<i class="fa-solid fa-moon"></i>';
 }
 
-// ==================== NAVEGACIÓN (Privilegios y Eventos eliminados) ====================
+// ==================== NAVEGACIÓN CON MODAL DE "EN DESARROLLO" ====================
 document.addEventListener('DOMContentLoaded', () => {
     document.querySelectorAll('.sidebar .tab-btn').forEach(btn => {
         btn.addEventListener('click', function() {
             const targetId = this.dataset.tab;
+            // Módulos en desarrollo (Solo Admin/Pastor los ven, pero al dar clic sale el modal)
+            if (targetId === 'eventos' || targetId === 'privilegios') {
+                mostrarNotificacion('Módulo En Desarrollo (Próximamente Versión 2.0)', 'info');
+                return;
+            }
             if(targetId === 'finanzas' && rol === 'Secretario_General') {
-                // MODAL DE CLAVE ADMIN PARA FINANZAS (Se puede añadir en futura versión)
-                return mostrarNotificacion('Módulo de Finanzas en desarrollo.', 'info');
+                // Aquí se podría añadir el modal de Clave Admin en una versión futura
+                mostrarNotificacion('Módulo de Finanzas requiere clave del Administrador (Próximamente).', 'info');
+                return;
             }
             cambiarPestaña(targetId);
         });
@@ -72,11 +78,11 @@ async function iniciarSesion(e) {
         document.querySelectorAll('.sidebar .tab-btn').forEach(b => b.style.display = 'flex');
         document.getElementById('btnSolicitudes').style.display = esAdminPastor ? 'flex' : 'none';
         document.getElementById('btnFinanzas').style.display = esAdminPastor ? 'flex' : 'none';
-        document.getElementById('btnPrivilegios').style.display = 'none'; // Eliminado visualmente en V1.0
-        document.getElementById('btnEventos').style.display = 'none';     // Eliminado visualmente en V1.0
+        document.getElementById('btnEventos').style.display = esAdminPastor ? 'flex' : 'none';
+        document.getElementById('btnPrivilegios').style.display = esAdminPastor ? 'flex' : 'none';
 
         if (esSecretarioGrupo) {
-            // Eliminar Membresía y Santa Cena del menú para grupos
+            // RESTRICCIÓN DE MENÚ EN CUENTAS GRUPALES
             document.getElementById('btnMembresia').style.display = 'none';
             document.getElementById('btnSantaCena').style.display = 'none';
             document.getElementById('btnEliminarAdmin').style.display = 'none';
@@ -91,22 +97,12 @@ async function iniciarSesion(e) {
     } catch { mostrarNotificacion('Error de conexión con Render.', 'error'); }
 }
 
-// ==================== CIERRE DE SESIÓN SEGURO ====================
-function cerrarSesion() {
-    sessionStorage.removeItem('zoar360_user');
-    if (rol !== 'Administrador') localStorage.removeItem('zoar360_admin');
-    window.location.href = window.location.href;
-}
+function cerrarSesion() { sessionStorage.clear(); if(rol !== 'Administrador') localStorage.clear(); window.location.href = window.location.href; }
 
-// Seguridad exclusiva: Redirección al Login al perder el foco o cerrar pestaña
-window.addEventListener('beforeunload', () => {
-    if (rol !== 'Administrador') sessionStorage.removeItem('zoar360_user');
-});
+// Seguridad de sesión
+window.addEventListener('beforeunload', () => { if (rol !== 'Administrador') sessionStorage.removeItem('zoar360_user'); });
 document.addEventListener('visibilitychange', () => {
-    if (document.hidden && rol !== 'Administrador') {
-        sessionStorage.removeItem('zoar360_user');
-        window.location.href = window.location.href;
-    }
+    if (document.hidden && rol !== 'Administrador') { sessionStorage.clear(); window.location.href = window.location.href; }
 });
 
 // ==================== MIEMBROS & SOLICITUDES ====================
@@ -173,17 +169,32 @@ async function procesarSolicitud(id, estado) {
     cargarSolicitudes(); cargarMiembros();
 }
 
-// ==================== ASISTENCIA ====================
+// ==================== ASISTENCIA (CON FILTRO REAL Y DESHABILITACIÓN DE BOTÓN) ====================
 async function cargarAsistencia() {
     const ahora = new Date();
     const dias = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
     const dia = dias[ahora.getDay()];
     const mapa = {'Martes':'Concilio Misionero Femenil','Miércoles':'Misioneritas','Jueves':'Fraternidad de Varones','Viernes':'Exploradores del Rey','Sábado':'Embajadores de Cristo','Domingo':'Culto General'};
     let grupo = mapa[dia] || '';
-    document.getElementById('diaActual').textContent = dia;
-    document.getElementById('grupoActual').textContent = grupo || 'Sin culto hoy';
-    if(!grupo) return document.getElementById('tablaAsistencia').innerHTML = "<tr><td colspan='5'>Hoy no hay culto.</td></tr>";
+    
+    // Determinar si es un día de culto para habilitar o deshabilitar el botón
+    const btnRecargar = document.querySelector('.btn-submit[onclick="cargarAsistencia()"]');
+    if(!grupo) {
+        document.getElementById('diaActual').textContent = dia;
+        document.getElementById('grupoActual').textContent = 'Sin culto hoy';
+        document.getElementById('tablaAsistencia').innerHTML = "<tr><td colspan='5'>Hoy no hay culto.</td></tr>";
+        btnRecargar.disabled = true; // Deshabilitar botón si no hay culto
+        btnRecargar.style.opacity = '0.5';
+        return;
+    } else {
+        btnRecargar.disabled = false;
+        btnRecargar.style.opacity = '1';
+    }
 
+    document.getElementById('diaActual').textContent = dia;
+    document.getElementById('grupoActual').textContent = grupo;
+
+    // FILTRO REAL DE MIEMBROS EN EL BACKEND (Grupo exacto)
     let endpoint = (rol.startsWith('Secretario_') && rol !== 'Secretario_General') ? `${API}/api/asistencia/grupo/${grupo}` : `${API}/api/miembros`;
     const res = await fetch(endpoint);
     const lista = await res.json();
@@ -195,15 +206,23 @@ async function cargarAsistencia() {
 async function guardarAsistencia() {
     const checks = document.querySelectorAll('.asistencia-check:checked');
     if(!checks.length) return mostrarNotificacion('Selecciona al menos un miembro.', 'error');
+
+    const botonGuardar = document.querySelector('.btn-submit[onclick="guardarAsistencia()"]');
+    botonGuardar.disabled = true;
+    botonGuardar.textContent = 'Guardando...';
+
     for (const check of checks) {
         const codigo = check.closest('tr').querySelector('td:first-child').innerText.trim();
         const res = await fetch(`${API}/api/marcar-asistencia`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({codigo}) });
         if(!res.ok) {
             const data = await res.json();
-            // Capturar error de horario del servidor (controlado en el backend)
+            botonGuardar.disabled = false;
+            botonGuardar.textContent = 'Guardar Asistencia';
             return mostrarNotificacion(data.error || 'Error al guardar.', 'error');
         }
     }
+    botonGuardar.disabled = false;
+    botonGuardar.textContent = 'Guardar Asistencia';
     mostrarNotificacion('✅ Asistencias guardadas.', 'exito');
     cargarAsistencia();
 }
@@ -297,16 +316,40 @@ async function buscarParaActualizar() {
     document.getElementById('m_actualizar_telefono').value = data.telefono || '';
     document.getElementById('m_actualizar_tipo').value = data.tipo;
     document.getElementById('m_actualizar_grupo').value = data.grupo;
+    
+    // CAMPO DE LIDERAZGO DINÁMICO AL ACTUALIZAR
+    // Detectar si el nombre original contenía un liderazgo entre paréntesis
+    const match = data.nombre.match(/\((.*)\)/);
+    if(match && match[1]) {
+        document.getElementById('m_actualizar_liderazgo_si').value = 'Si';
+        document.getElementById('m_actualizar_liderazgo_texto').value = match[1];
+        document.getElementById('div_actualizar_liderazgo_texto').style.display = 'block';
+    } else {
+        document.getElementById('m_actualizar_liderazgo_si').value = 'No';
+        document.getElementById('div_actualizar_liderazgo_texto').style.display = 'none';
+    }
 }
+
+function toggleActualizarLiderazgo() {
+    const val = document.getElementById('m_actualizar_liderazgo_si').value;
+    document.getElementById('div_actualizar_liderazgo_texto').style.display = val === 'Si' ? 'block' : 'none';
+}
+
 async function guardarActualizacion() {
     const codigo = document.getElementById('inputActualizarCodigo').value.trim();
+    const liderazgoSi = document.getElementById('m_actualizar_liderazgo_si').value === 'Si';
+    const liderazgoTexto = document.getElementById('m_actualizar_liderazgo_texto').value.trim();
+    if(liderazgoSi && !liderazgoTexto) return mostrarNotificacion('Debes especificar el liderazgo.', 'error');
+
     const datos = {
         nombre: document.getElementById('m_actualizar_nombre').value.trim(),
         telefono: document.getElementById('m_actualizar_telefono').value.trim(),
         tipo: document.getElementById('m_actualizar_tipo').value,
-        grupo: document.getElementById('m_actualizar_grupo').value
+        grupo: document.getElementById('m_actualizar_grupo').value,
+        liderazgo: liderazgoSi ? liderazgoTexto : null
     };
     if(!datos.nombre) return mostrarNotificacion('El nombre no puede estar vacío.', 'error');
+
     const res = await fetch(`${API}/api/miembros/${codigo}`, { method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify(datos) });
     if(res.ok) { mostrarNotificacion('Información actualizada.', 'exito'); cerrarModalYLimpiar('modalActualizar'); cargarMiembros(); } 
     else { mostrarNotificacion('Error al actualizar.', 'error'); }
@@ -331,6 +374,7 @@ function cerrarModalYLimpiar(modalId) {
         document.getElementById('inputActualizarCodigo').style.display = 'block';
         document.getElementById('btnBuscarActualizar').style.display = 'inline-block';
         document.getElementById('btnGuardarActualizar').style.display = 'none';
+        document.getElementById('div_actualizar_liderazgo_texto').style.display = 'none';
     }
 }
 const abrirModal = id => document.getElementById(id).classList.add('activo');

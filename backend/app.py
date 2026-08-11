@@ -15,7 +15,7 @@ def get_db():
     conn.row_factory = sqlite3.Row
     return conn
 
-# ==================== LOGIN ====================
+# ==================== LOGIN Y VALIDACIÓN ====================
 @app.route('/api/login', methods=['POST'])
 def login():
     data = request.json
@@ -25,7 +25,7 @@ def login():
         return jsonify({"message": "Login exitoso", "rol": user['rol'], "email": user['email']}), 200
     return jsonify({"error": "Credenciales incorrectas"}), 401
 
-# ==================== MIEMBROS ====================
+# ==================== MIEMBROS Y SOLICITUDES ====================
 @app.route('/api/miembros', methods=['GET'])
 def obtener_miembros():
     conn = get_db()
@@ -49,6 +49,7 @@ def crear_miembro():
     conn = get_db()
     ultimo = conn.execute("SELECT MAX(codigo) as max FROM miembros").fetchone()
     nuevo_codigo = f"{(int(ultimo['max']) + 1) if ultimo and ultimo['max'] else 1:04d}"
+    
     nombre_final = data['nombre'] + (f" ({data['liderazgo']})" if data.get('liderazgo') else "")
     conn.execute("INSERT INTO miembros (codigo, nombre, telefono, tipo, grupo) VALUES (?, ?, ?, ?, ?)", (nuevo_codigo, nombre_final, data.get('telefono'), data['tipo'], data.get('grupo', 'General')))
     conn.commit()
@@ -83,13 +84,15 @@ def actualizar_miembro(codigo):
     conn.close()
     return jsonify({"message": "Información actualizada"}), 200
 
-# ==================== SOLICITUDES ====================
 @app.route('/api/solicitudes', methods=['POST'])
 def crear_solicitud():
     data = request.json
     conn = get_db()
     nombre_final = data['nombre'] + (f" ({data['liderazgo']})" if data.get('liderazgo') else "")
     conn.execute("INSERT INTO solicitudes (nombre, telefono, tipo, grupo, solicitante_email, estado) VALUES (?, ?, ?, ?, ?, ?)", (nombre_final, data.get('telefono'), data['tipo'], data.get('grupo'), session.get('user_rol'), 'Pendiente'))
+    conn.commit()
+    # AUDITORÍA: Registro de solicitud
+    conn.execute("INSERT INTO notificaciones_sistema (usuario_correo, accion) VALUES (?, ?)", (session.get('user_rol'), f"Envío una solicitud para registrar a {data['nombre']}"))
     conn.commit()
     conn.close()
     return jsonify({"message": "Solicitud enviada"}), 201
@@ -117,11 +120,11 @@ def procesar_solicitud(id):
     conn.close()
     return jsonify({"message": "Solicitud procesada"}), 200
 
-# ==================== ASISTENCIA (CON VALIDACIÓN DE HORARIO DEL SERVIDOR) ====================
+# ==================== ASISTENCIA Y AUDITORÍA ====================
 @app.route('/api/asistencia/grupo/<grupo>', methods=['GET'])
 def obtener_asistencia_grupo(grupo):
     conn = get_db()
-    # Búsqueda flexible para capturar miembros que tengan el grupo en su cadena de ministerios (Ej: "Fraternidad, Exploradores")
+    # Búsqueda exacta del ministerio en la cadena de la columna 'grupo' de SQLite
     miembros = conn.execute("SELECT * FROM miembros WHERE grupo LIKE ?", (f'%{grupo}%',)).fetchall()
     resultado = []
     for m in miembros:
@@ -150,28 +153,35 @@ def marcar_asistencia():
     dia_semana = ahora.weekday() # 0=Lun, 6=Dom
     usuario_rol = session.get('user_rol')
     grupo_miembro = miembro['grupo']
-    error = None
-
+    
     # === LÓGICA ESTRICTA DE HORARIO POR SERVIDOR (UTC-6 para El Salvador) ===
-    # Nota: Render usa UTC. Sumamos 6 horas para comparar.
     hora_local = (hora_actual.hour - 6) if (hora_actual.hour - 6) >= 0 else (hora_actual.hour + 18)
     min_local = hora_actual.minute
 
     # Reglas de días y horarios
     if dia_semana == 0: # Domingo (Santa Cena y Culto General)
         if not ((hora_local == 14 and min_local >= 45) or (hora_local == 15) or (hora_local == 16 and min_local == 0)):
-            error = "⛔ Fuera de horario. Domingos solo de 2:45 PM a 4:00 PM."
-    elif dia_semana in [1, 2, 3, 4, 5, 6]: # Lunes a Sábado (Martes a Sábado para cultos)
+            return jsonify({"error": "⛔ Fuera de horario. Domingos solo de 2:45 PM a 4:00 PM."}), 403
+    elif dia_semana in [1, 2, 3, 4, 5, 6]: # Lunes a Sábado
+        # Verificar si el día es válido para el grupo
+        dias_validos = {'Martes':'Concilio Misionero Femenil','Miércoles':'Misioneritas','Jueves':'Fraternidad de Varones','Viernes':'Exploradores del Rey','Sábado':'Embajadores de Cristo'}
+        dia_nombre = ['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado','Domingo'][dia_semana]
+        
+        if dia_semana == 1 or dia_nombre not in dias_validos:
+            # Si es Lunes o un día sin grupo, bloqueamos
+            return jsonify({"error": f"⛔ El registro de asistencia para este grupo solo está habilitado el día correspondiente."}), 403
+        
+        # Verificar horario de 5:45 PM a 7:00 PM
         if not ((hora_local == 17 and min_local >= 45) or (hora_local == 18) or (hora_local == 19 and min_local == 0)):
-            error = "⛔ Fuera de horario. De Martes a Sábado solo de 5:45 PM a 7:00 PM."
-
-    if error:
-        conn.close()
-        return jsonify({"error": error}), 403
+            # Mensaje de error personalizado con el día correcto
+            return jsonify({"error": f"⛔ Fuera de horario. El registro para este grupo solo está habilitado los {dia_nombre} de 5:45 PM a 7:00 PM."}), 403
 
     # === PERSISTENCIA REAL DE DATOS ===
-    # Insertar el registro de la asistencia del día de hoy
     conn.execute("INSERT INTO asistencias (miembro_id, fecha, hora) VALUES (?, ?, ?)", (miembro['id'], fecha_actual.strftime('%Y-%m-%d'), hora_actual.strftime('%H:%M:%S')))
+    conn.commit()
+    
+    # AUDITORÍA: Registro de asistencia exitosa
+    conn.execute("INSERT INTO notificaciones_sistema (usuario_correo, accion) VALUES (?, ?)", (session.get('user_rol'), f"El grupo {usuario_rol} envió la asistencia a las {hora_actual.strftime('%H:%M')} el día {fecha_actual.strftime('%A')}"))
     conn.commit()
     conn.close()
 
@@ -186,6 +196,15 @@ def registrar_santa_cena():
     conn.commit()
     conn.close()
     return jsonify({"message": "Registro guardado"}), 200
+
+# ==================== NOTIFICACIONES DE AUDITORÍA PARA ADMIN/PASTOR ====================
+@app.route('/api/auditoria', methods=['GET'])
+def obtener_auditoria():
+    if session.get('user_rol') not in ['Administrador', 'Pastor']: return jsonify([])
+    conn = get_db()
+    notis = conn.execute("SELECT * FROM notificaciones_sistema ORDER BY fecha_hora DESC LIMIT 50").fetchall()
+    conn.close()
+    return jsonify([dict(n) for n in notis])
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)

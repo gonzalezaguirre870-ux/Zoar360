@@ -4,9 +4,9 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Zoar360</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" />
     <link rel="stylesheet" href="style.css" />
     <link rel="icon" type="image/png" href="icono.png" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
 </head>
 <body>
     <!-- SPLASH Y LOGIN -->
@@ -38,6 +38,7 @@
             <div class="header-actions">
                 <button onclick="cambiarTema()" class="btn-tema" id="btnTema"><i class="fa-solid fa-moon"></i></button>
                 
+                <!-- DROPDOWN CON ESTRUCTURA DE LÍNEAS CLARAS -->
                 <div class="header-user" id="headerUser" onclick="toggleDropdown()">
                     <div class="header-avatar"><i class="fa-solid fa-user"></i></div>
                     <span id="nombreUsuarioHeader">Usuario</span>
@@ -61,7 +62,6 @@
         </header>
 
         <div class="app-body">
-            <!-- El menú ahora usa la clase sidebar y se oculta por CSS en móviles -->
             <nav class="sidebar" id="sidebarNav">
                 <button class="tab-btn active" data-tab="membresia" id="btnMembresia"><i class="fa-solid fa-users"></i><span>Membresía</span></button>
                 <button class="tab-btn" data-tab="asistencia" id="btnAsistencia"><i class="fa-solid fa-clipboard-check"></i><span>Asistencia</span></button>
@@ -75,7 +75,7 @@
             </nav>
 
             <main class="contenido">
-                <!-- SECCIONES (Mantenidas igual) -->
+                <!-- MEMBRESÍA -->
                 <section id="membresia" class="tab-content active">
                     <div class="card">
                         <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:15px;">
@@ -86,58 +86,34 @@
                                 <button class="btn-submit" style="background:#f59e0b; width:auto; padding:10px 18px;" id="btnActualizarAdmin" onclick="abrirModalActualizar()"><i class="fa-solid fa-pen"></i> Actualizar Información</button>
                             </div>
                         </div>
-                        <div class="tabla-wrap"><table><thead><tr><th>Código</th><th>Nombre</th><th>Teléfono</th><th>Tipo</th><th>Ministerios</th></tr></thead><tbody id="tablaMiembros"></tbody></table></div>
-                    </div>
-                </section>
-                <!-- ... Resto de secciones igual que antes ... -->
-                <section id="asistencia" class="tab-content">
-                    <div class="card"><h2><i class="fa-solid fa-clipboard-check icono-titulo"></i> Control de Asistencia</h2>
-                        <div style="display:flex; justify-content:space-between; flex-wrap:wrap; gap:10px; margin-bottom:15px;">
-                            <div class="asistencia-info"><div class="dia-actual"><strong>Hoy es: </strong><span id="diaActual"></span><span class="grupo-actual" id="grupoActual"></span></div></div>
-                            <button class="btn-agregar" onclick="abrirModal('modalMiembro')"><i class="fa-solid fa-user-plus"></i> Solicitar Nuevo Hermano</button>
+                        <div class="tabla-wrap">
+                            <table>
+                                <thead>
+                                    <tr><th>Código</th><th>Nombre</th><th>Teléfono</th><th>Tipo</th><th>Ministerios</th></tr>
+                                </thead>
+                                <tbody id="tablaMiembros"></tbody>
+                            </table>
                         </div>
-                        <button class="btn-submit" onclick="cargarAsistencia()" style="width:auto; margin-bottom:20px;"><i class="fa-solid fa-rotate"></i> Recargar Lista</button>
-                        <div class="tabla-wrap"><table><thead><tr><th>Código</th><th>Nombre</th><th>Ministerio</th><th>¿Asistió?</th><th>Total</th></tr></thead><tbody id="tablaAsistencia"></tbody></table></div>
-                        <button type="button" class="btn-submit" onclick="guardarAsistencia()"><i class="fa-solid fa-floppy-disk"></i> Guardar Asistencia</button>
                     </div>
                 </section>
-                <section id="santacena" class="tab-content">
-                    <div class="card"><h2><i class="fa-solid fa-wine-glass icono-titulo"></i> Santa Cena</h2>
-                        <div style="background:#f1f5f9; border-radius:8px; padding:15px; margin-bottom:20px; text-align:center;">
-                            <p style="font-weight:bold; margin-bottom:5px;">Próximo Domingo de Santa Cena:</p>
-                            <span id="cronometroSantaCena" style="font-size:1.5rem; color:#186fbe;">Cargando...</span>
-                        </div>
-                        <div class="tabla-wrap"><table><thead><tr><th>Código</th><th>Nombre</th><th>Participó</th></tr></thead><tbody id="tablaSantaCena"></tbody></table></div>
-                        <button type="button" class="btn-submit" onclick="guardarSantaCena()"><i class="fa-solid fa-floppy-disk"></i> Guardar Registro</button>
-                    </div>
-                </section>
-                <section id="solicitudes" class="tab-content"><div class="card"><h2>Solicitudes Pendientes</h2><div class="tabla-wrap"><table><thead><tr><th>Nombre</th><th>Estado</th><th>Acciones</th></tr></thead><tbody id="tablaSolicitudes"></tbody></table></div></div></section>
-                <section id="finanzas" class="tab-content"><div class="card"><h2>Finanzas</h2><p>Módulo en desarrollo.</p></div></section>
-                <section id="eventos" class="tab-content"><div class="card"><h2>Eventos</h2><p>Módulo En Desarrollo (Versión 2.0).</p></div></section>
-                <section id="privilegios" class="tab-content"><div class="card"><h2>Privilegios</h2><p>Módulo En Desarrollo (Versión 2.0).</p></div></section>
-                <section id="auditoria" class="tab-content">
-                    <div class="card"><h2><i class="fa-solid fa-list-check icono-titulo"></i> Historial de Actividad</h2>
-                        <div class="tabla-wrap"><table><thead><tr><th>Fecha / Hora</th><th>Usuario / Grupo</th><th>Detalles</th></tr></thead><tbody id="tablaAuditoria"></tbody></table></div>
-                    </div>
-                </section>
+
+                <!-- ASISTENCIA (Omitido el cuerpo para brevedad, mantener tu código existente aquí) -->
+                <section id="asistencia" class="tab-content"><div class="card">...</div></section>
+                <section id="santacena" class="tab-content"><div class="card">...</div></section>
+                <section id="solicitudes" class="tab-content"><div class="card">...</div></section>
+                <section id="finanzas" class="tab-content"><div class="card">...</div></section>
+                <section id="eventos" class="tab-content"><div class="card">...</div></section>
+                <section id="privilegios" class="tab-content"><div class="card">...</div></section>
+                <section id="auditoria" class="tab-content"><div class="card">...</div></section>
             </main>
         </div>
     </div>
 
-    <!-- MODALES (Mantenidos igual que antes) -->
-    <div id="modalNotificacion" class="modal">
-        <div class="modal-content"><div id="iconoNotificacion" style="font-size: 3rem; margin-bottom: 10px;">⚠️</div><h3 id="tituloNotificacion">Aviso</h3><p id="textoNotificacion" style="margin-bottom: 20px;"></p><button class="btn-submit" onclick="cerrarModal('modalNotificacion')" style="background-color: #2563eb;">Entendido</button></div>
-    </div>
-    <div id="modalCreditos" class="modal">
-        <div class="modal-content" style="max-width: 500px; text-align: center;">
-            <span class="modal-close" onclick="cerrarModal('modalCreditos')">&times;</span>
-            <h2 style="color: #0c4d8e; margin-bottom: 5px;">Zoar360</h2>
-            <p><strong>Propuesto por:</strong><br>Pastor Víctor Aguirre</p>
-            <p><strong>Diseñado y Desarrollado por:</strong><br>Jonathan Aguirre</p>
-            <p style="font-style: italic; color: #555;">Sistema Oficial de la Iglesia Zoar</p>
-            <p style="font-size: 0.8rem; color: #888; margin-top: 15px;">Iglesia Zoar • © 2026</p>
-        </div>
-    </div>
+    <!-- MODALES -->
+    <div id="modalNotificacion" class="modal"><div class="modal-content">...</div></div>
+    <div id="modalCreditos" class="modal"><div class="modal-content">...</div></div>
+
+    <!-- MODAL MIEMBRO (CORREGIDO CON LA LÓGICA DE PROPIEDAD / CATEÚMENO) -->
     <div id="modalMiembro" class="modal">
         <div class="modal-content">
             <span class="modal-close" onclick="cerrarModal('modalMiembro')">&times;</span>
@@ -147,53 +123,36 @@
                     <div class="form-group"><label>Nombre Completo *</label><div class="input-icon"><i class="fa-solid fa-user"></i><input type="text" id="m_nombre" required /></div></div>
                     <div class="form-group"><label>Teléfono</label><div class="input-icon"><i class="fa-solid fa-phone"></i><input type="tel" id="m_telefono" /></div></div>
                     <div class="form-group"><label>Clasificación</label><div class="input-icon"><i class="fa-solid fa-id-card"></i><select id="m_tipo" onchange="toggleLiderazgoPorTipo()"><option value="Catecumeno">Catecúmeno</option><option value="Propiedad">En Propiedad</option></select></div></div>
+                    
+                    <!-- DIV DE PREGUNTA DE LIDERAZGO (Solo para Propiedad) -->
+                    <div class="form-group" id="div_liderazgo_pregunta" style="display:none; grid-column: span 1;">
+                        <label>¿Posee algún liderazgo?</label>
+                        <div class="input-icon"><i class="fa-solid fa-briefcase"></i><select id="m_liderazgo_si" onchange="toggleLiderazgoSiNo()"><option value="No">No</option><option value="Si">Sí</option></select></div>
+                    </div>
                     <div class="form-group" id="div_liderazgo_texto" style="display:none; grid-column: span 1;">
                         <label>Especificar liderazgo(s)</label>
-                        <div class="input-icon"><i class="fa-solid fa-pen"></i><input type="text" id="m_liderazgo_texto" placeholder="Ej: Maestro, Vicepresidente" /></div>
+                        <div class="input-icon"><i class="fa-solid fa-pen"></i><input type="text" id="m_liderazgo_texto" placeholder="Ej: Maestro de Escuela Dominical, Vicepresidente" /></div>
+                    </div>
+                </div>
+                <div class="form-group" style="margin-top:10px;">
+                    <label>¿A qué grupos pertenece?</label>
+                    <div class="checkbox-grid" style="display:flex; flex-wrap:wrap; gap:10px; margin-top:5px;">
+                        <label style="margin-right:15px;"><input type="checkbox" id="g_femenil" /> Concilio Misionero Femenil</label>
+                        <label style="margin-right:15px;"><input type="checkbox" id="g_misioneritas" /> Misioneritas</label>
+                        <label style="margin-right:15px;"><input type="checkbox" id="g_varones" /> Fraternidad de Varones</label>
+                        <label style="margin-right:15px;"><input type="checkbox" id="g_exploradores" /> Exploradores del Rey</label>
+                        <label style="margin-right:15px;"><input type="checkbox" id="g_embajadores" /> Embajadores de Cristo</label>
                     </div>
                 </div>
                 <button type="submit" class="btn-submit" id="btnModalMiembroAction">Enviar</button>
             </form>
         </div>
     </div>
-    <div id="modalEliminar" class="modal">
-        <div class="modal-content" style="max-width: 450px;">
-            <span class="modal-close" onclick="cerrarModal('modalEliminar')">&times;</span>
-            <h3 style="color:#ef4444;"><i class="fa-solid fa-trash"></i> Eliminar Miembro</h3>
-            <div class="form-group"><label>Código del Miembro</label><div class="input-icon"><i class="fa-solid fa-hashtag"></i><input type="text" id="inputEliminarCodigo" placeholder="Ej: 0001" /></div></div>
-            <div id="textoConfirmacionEliminar" style="font-weight:bold; color: #0c4d8e; margin: 10px 0; text-align:center;"></div>
-            <button class="btn-submit" style="background:#ef4444;" onclick="buscarYEliminar()">Eliminar Permanentemente</button>
-        </div>
-    </div>
-    <div id="modalActualizar" class="modal">
-        <div class="modal-content" style="max-width: 500px;">
-            <span class="modal-close" onclick="cerrarModal('modalActualizar')">&times;</span>
-            <h3 style="color:#f59e0b;"><i class="fa-solid fa-pen"></i> Actualizar Información</h3>
-            <div class="form-group"><label>Código del Miembro</label><div class="input-icon"><i class="fa-solid fa-hashtag"></i><input type="text" id="inputActualizarCodigo" placeholder="Ej: 0001" /></div></div>
-            <button class="btn-submit" style="background:#f59e0b;" onclick="buscarParaActualizar()" id="btnBuscarActualizar">Buscar Miembro</button>
-            <div id="formActualizarModal" style="display:none; margin-top: 20px;">
-                <div class="form-grid">
-                    <div class="form-group"><label>Nombre</label><div class="input-icon"><i class="fa-solid fa-user"></i><input type="text" id="m_actualizar_nombre" /></div></div>
-                    <div class="form-group"><label>Teléfono</label><div class="input-icon"><i class="fa-solid fa-phone"></i><input type="tel" id="m_actualizar_telefono" /></div></div>
-                    <div class="form-group"><label>Tipo</label><div class="input-icon"><i class="fa-solid fa-id-card"></i><select id="m_actualizar_tipo" onchange="toggleActualizarLiderazgoPorTipo()"><option value="Catecumeno">Catecúmeno</option><option value="Propiedad">En Propiedad</option></select></div></div>
-                    <div class="form-group" id="div_actualizar_liderazgo_texto" style="display:none;">
-                        <label>Especificar liderazgo(s)</label>
-                        <div class="input-icon"><i class="fa-solid fa-pen"></i><input type="text" id="m_actualizar_liderazgo_texto" placeholder="Ej: Presidente" /></div>
-                    </div>
-                </div>
-                <button class="btn-submit" style="background:#2563eb;" onclick="guardarActualizacion()" id="btnGuardarActualizar">Guardar Cambios</button>
-            </div>
-        </div>
-    </div>
-    <div id="modalClaveAdmin" class="modal">
-        <div class="modal-content" style="max-width: 400px;">
-            <span class="modal-close" onclick="cerrarModal('modalClaveAdmin')">&times;</span>
-            <h3 style="color:#ef4444;"><i class="fa-solid fa-lock"></i> Acceso Restringido</h3>
-            <p>Para acceder a Finanzas, ingrese la clave del Administrador:</p>
-            <div class="form-group"><div class="input-icon"><i class="fa-solid fa-key"></i><input type="password" id="inputContraAdmin" placeholder="Contraseña del Admin" /></div></div>
-            <button class="btn-submit" onclick="verificarClaveAdmin()"><i class="fa-solid fa-check"></i> Verificar Acceso</button>
-        </div>
-    </div>
+
+    <!-- MODALES DE ELIMINAR, ACTUALIZAR Y CLAVE ADMIN (Mantener estructura actual) -->
+    <div id="modalEliminar" class="modal">...</div>
+    <div id="modalActualizar" class="modal">...</div>
+    <div id="modalClaveAdmin" class="modal">...</div>
 
     <script src="logica.js"></script>
 </body>

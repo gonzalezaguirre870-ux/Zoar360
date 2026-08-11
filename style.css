@@ -183,9 +183,10 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
+    transition: 0.3s;
 }
 
-/* DROPDOWN (Nuevo Formato) */
+/* DROPDOWN */
 .header-user {
     position: relative;
     cursor: pointer;
@@ -318,7 +319,7 @@ body {
     color: #fff;
 }
 
-/* CONTENIDO */
+/* CONTENIDO Y TABLAS (RESTAURADO) */
 .contenido {
     flex: 1;
     padding: 24px;
@@ -354,7 +355,54 @@ body {
     border: 1px solid var(--borde);
 }
 
-/* FORMULARIOS Y BOTONES */
+.tabla-wrap {
+    overflow-x: auto;
+    margin-top: 20px;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.88rem;
+}
+
+thead th {
+    text-align: left;
+    padding: 10px 12px;
+    background: #f1f5f9;
+    color: var(--texto-gris);
+    font-weight: 600;
+    border-bottom: 1px solid var(--borde);
+}
+
+tbody td {
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--borde);
+}
+
+tbody tr:hover {
+    background: #f9fafc;
+}
+
+.badge {
+    display: inline-block;
+    padding: 2px 12px;
+    border-radius: 40px;
+    font-size: 0.75rem;
+    font-weight: 700;
+}
+
+.badge-propiedad {
+    background: #dbeafe;
+    color: #0c4d8e;
+}
+
+.badge-pendiente {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+/* FORMULARIOS */
 .form-grid {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
@@ -493,9 +541,38 @@ body {
     display: flex;
 }
 
-/* ============================================================
-   MEDIA QUERIES MÓVILES (RESPONSIVE)
-   ============================================================ */
+#modalNotificacion .modal-content {
+    max-width: 400px;
+    text-align: center;
+}
+
+/* ASISTENCIA */
+.asistencia-info {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px 24px;
+    background: #f1f5f9;
+    padding: 14px 20px;
+    border-radius: var(--radio);
+    margin-bottom: 20px;
+}
+
+.asistencia-info .dia-actual {
+    font-size: 1rem;
+}
+
+.asistencia-info .grupo-actual {
+    display: inline-block;
+    background: #2563eb;
+    color: #fff;
+    padding: 2px 14px;
+    border-radius: 40px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    margin-left: 8px;
+}
+
+/* MEDIA QUERIES MÓVILES (RESPONSIVE) */
 .btn-menu-movil {
     display: none;
     background: none;
@@ -510,7 +587,6 @@ body {
         display: block;
     }
 
-    /* Menú Oculto por defecto y flotante */
     .sidebar {
         position: fixed;
         top: 60px;
@@ -523,7 +599,6 @@ body {
         box-shadow: 4px 0 15px rgba(0, 0, 0, 0.2);
     }
 
-    /* Clase activa para mostrar el menú */
     body.sidebar-abierto .sidebar {
         transform: translateX(0);
     }
@@ -576,7 +651,7 @@ body {
 }
 
 /* ============================================================
-   MODO OSCURO - CONTRASTE DE TEXTOS
+   MODO OSCURO - REPARADO Y CONTRASTE TOTAL
    ============================================================ */
 body.modo-oscuro {
     --fondo: #0f172a;
@@ -622,11 +697,21 @@ body.modo-oscuro .modal-content {
     color: #f1f5f9;
 }
 
-body.modo-oscuro thead th {
+body.modo-oscuro .tabla-wrap thead th {
     background: #334155;
     color: #f1f5f9;
 }
 
-body.modo-oscuro tbody td {
+body.modo-oscuro .tabla-wrap tbody td {
+    color: #f1f5f9;
+    border-bottom-color: #334155;
+}
+
+body.modo-oscuro .input-icon input::placeholder {
+    color: #94a3b8;
+}
+
+body.modo-oscuro .asistencia-info {
+    background: #1e293b;
     color: #f1f5f9;
 }

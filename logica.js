@@ -4,15 +4,15 @@ let esModoOscuro = false;
 
 const $ = id => document.getElementById(id);
 
-// MAPEO DE ROLES, MINISTERIOS Y GÉNEROS (Estricto)
+// MAPEO DE ROLES Y MINISTERIOS (Nombres COMPLETOS y específicos)
 const MAPA_ROLES = {
-    'Secretaria Embajadores de Cristo': { ministerio: 'Embajadores de Cristo', rol: 'Secretaria' },
-    'Secretario Fraternidad de Varones': { ministerio: 'Fraternidad de Varones', rol: 'Secretario' },
-    'Secretario Exploradores del Rey': { ministerio: 'Exploradores del Rey', rol: 'Secretario' },
-    'Secretario Misioneritas': { ministerio: 'Misioneritas', rol: 'Secretaria' },
-    'Secretaria Concilio Misionero Femenil': { ministerio: 'Concilio Misionero Femenil', rol: 'Secretaria' },
-    'Secretario General': { ministerio: 'Culto General', rol: 'Secretario General' },
-    'Pastor': { ministerio: 'Pastorado', rol: 'Pastor' },
+    'Secretaria_Embajadores_de_Cristo': { ministerio: 'Embajadores de Cristo', rol: 'Secretaria' },
+    'Secretario_Fraternidad_de_Varones': { ministerio: 'Fraternidad de Varones', rol: 'Secretario' },
+    'Secretario_Exploradores_del_Rey': { ministerio: 'Exploradores del Rey', rol: 'Secretario' },
+    'Secretario_Misioneritas': { ministerio: 'Misioneritas', rol: 'Secretaria' },
+    'Secretaria_Concilio_Misionero_Femenil': { ministerio: 'Concilio Misionero Femenil', rol: 'Secretaria' },
+    'Secretario_General': { ministerio: 'Culto General', rol: 'Secretario General' },
+    'Pastor': { ministerio: 'pastor', rol: 'pastor' },
     'Administrador': { ministerio: 'Administración', rol: 'Administrador' }
 };
 
@@ -23,16 +23,21 @@ const mostrarNotificacion = (mensaje, tipo = 'error') => {
     document.getElementById('modalNotificacion').classList.add('activo');
 };
 
-// ==================== DROPDOWN Y CIERRE DE MENÚ ====================
+// ==================== MODO OSCURO Y DROPDOWN ====================
 function toggleDropdown() { document.getElementById('headerUser').classList.toggle('abierto'); }
 
-// Cierra el menú móvil al hacer clic fuera, en el botón de menú o en una opción
-document.addEventListener('click', function (e) {
+function cambiarTema() {
+    esModoOscuro = !esModoOscuro;
+    document.body.classList.toggle('modo-oscuro', esModoOscuro);
+    document.getElementById('btnTema').innerHTML = esModoOscuro ? '<i class="fa-solid fa-sun"></i>' : '<i class="fa-solid fa-moon"></i>';
+}
+
+// ==================== CIERRE DE MENÚ MÓVIL ====================
+document.addEventListener('click', function(e) {
     const sidebar = document.getElementById('sidebarNav');
     const menuBtn = document.getElementById('btnMenuMovil');
-    const isClickInsideMenu = sidebar.contains(e.target);
-    const isClickOnMenuBtn = menuBtn.contains(e.target);
-
+    const isClickInsideMenu = sidebar?.contains(e.target);
+    const isClickOnMenuBtn = menuBtn?.contains(e.target);
     if (!isClickInsideMenu && !isClickOnMenuBtn && document.body.classList.contains('sidebar-abierto')) {
         document.body.classList.remove('sidebar-abierto');
     }
@@ -46,13 +51,13 @@ document.querySelectorAll('#sidebarNav .tab-btn, #sidebarNav .btn-about').forEac
 // ==================== NAVEGACIÓN ====================
 document.addEventListener('DOMContentLoaded', () => {
     document.querySelectorAll('.sidebar .tab-btn').forEach(btn => {
-        btn.addEventListener('click', function () {
+        btn.addEventListener('click', function() {
             const targetId = this.dataset.tab;
             if (targetId === 'eventos' || targetId === 'privilegios') {
                 mostrarNotificacion('Módulo En Desarrollo (Próximamente Versión 2.0)', 'info');
                 return;
             }
-            if (targetId === 'finanzas' && rol === 'Secretario_General') {
+            if(targetId === 'finanzas' && rol === 'Secretario_General') {
                 document.getElementById('modalClaveAdmin').classList.add('activo');
                 return;
             }
@@ -65,42 +70,44 @@ const cambiarPestaña = id => {
     document.querySelectorAll('.tab-content, .sidebar .tab-btn').forEach(el => el.classList.remove('active'));
     document.getElementById(id).classList.add('active');
     document.querySelector(`.tab-btn[data-tab="${id}"]`).classList.add('active');
-    if (id === 'membresia') cargarMiembros();
-    if (id === 'asistencia') cargarAsistencia();
-    if (id === 'santacena') iniciarCronometroSantaCena();
-    if (id === 'solicitudes') cargarSolicitudes();
-    if (id === 'auditoria') cargarAuditoria();
+    if(id === 'membresia') cargarMiembros();
+    if(id === 'asistencia') cargarAsistencia();
+    if(id === 'santacena') iniciarCronometroSantaCena();
+    if(id === 'solicitudes') cargarSolicitudes();
+    if(id === 'auditoria') cargarAuditoria();
 };
 
-// ==================== LOGIN Y SEGURIDAD POR DESENFOQUE ====================
+// ==================== LOGIN, SEGURIDAD Y FECHA ====================
 async function iniciarSesion(e) {
     e.preventDefault();
     try {
-        const res = await fetch(`${API}/api/login`, {
-            method: 'POST', headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email: $('l_email').value, password: $('l_pass').value }),
+        const res = await fetch(`${API}/api/login`, { 
+            method:'POST', headers:{'Content-Type':'application/json'}, 
+            body:JSON.stringify({email:$('l_email').value, password:$('l_pass').value}),
             credentials: 'include'
         });
         const data = await res.json();
-        if (!res.ok) { mostrarNotificacion(data.error, 'error'); document.getElementById('formLogin').reset(); return; }
-
+        if(!res.ok) { mostrarNotificacion(data.error, 'error'); document.getElementById('formLogin').reset(); return; }
+        
         rol = data.rol;
-        sessionStorage.setItem('zoar360_user', JSON.stringify({ rol: data.rol, email: data.email }));
+        sessionStorage.setItem('zoar360_user', JSON.stringify({rol: data.rol, email: data.email}));
         if (rol === 'Administrador') localStorage.setItem('zoar360_admin', 'true');
 
         document.getElementById('pantallaLogin').style.display = 'none';
         document.getElementById('appPrincipal').style.display = 'block';
-
-        const fecha = new Date().toLocaleDateString('es-ES', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+        
+        // Fecha en español (funciona en móviles)
+        const fecha = new Date().toLocaleDateString('es-ES', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
         document.getElementById('fechaHeader').textContent = fecha;
 
-        // Formateo del Dropdown (Nuevas líneas independientes)
+        // Mapeo de Dropdown
         const info = MAPA_ROLES[rol] || { ministerio: 'General', rol: rol };
         document.getElementById('nombreUsuarioHeader').textContent = info.rol;
         document.getElementById('rolUsuarioDropdown').textContent = info.rol;
         document.getElementById('ministerioUsuarioDropdown').textContent = info.ministerio;
         document.getElementById('correoUsuarioDropdown').textContent = data.email;
 
+        // Visibilidad de Menús
         const esAdminPastor = (rol === 'Administrador' || rol === 'Pastor');
         const esSecretarioGeneral = (rol === 'Secretario_General');
         const esSecretarioGrupo = rol.startsWith('Secretario_') && rol !== 'Secretario_General';
@@ -114,7 +121,7 @@ async function iniciarSesion(e) {
         document.getElementById('btnSantaCena').style.display = (esAdminPastor || esSecretarioGeneral) ? 'flex' : 'none';
 
         if (esSecretarioGrupo) {
-            // Eliminación completa de Membresía y demás para grupos
+            // LIMPIEZA TOTAL DE GRUPOS (Membresía y Santa Cena eliminados)
             document.getElementById('btnMembresia').style.display = 'none';
             document.getElementById('btnSantaCena').style.display = 'none';
             document.getElementById('btnEliminarAdmin').style.display = 'none';
@@ -134,7 +141,7 @@ async function iniciarSesion(e) {
     } catch { mostrarNotificacion('Error de conexión con el servidor.', 'error'); }
 }
 
-// Seguridad por desenfoque (Reactividad)
+// Seguridad por desenfoque (Admin excluido)
 window.addEventListener('beforeunload', () => {
     if (rol !== 'Administrador') sessionStorage.removeItem('zoar360_user');
 });
@@ -144,15 +151,14 @@ document.addEventListener('visibilitychange', () => {
         window.location.href = window.location.href;
     }
 });
-
-function cerrarSesion() { sessionStorage.clear(); if (rol !== 'Administrador') localStorage.clear(); window.location.href = window.location.href; }
+function cerrarSesion() { sessionStorage.clear(); if(rol !== 'Administrador') localStorage.clear(); window.location.href = window.location.href; }
 
 // ==================== CLAVE ADMIN ====================
 async function verificarClaveAdmin() {
     const clave = document.getElementById('inputContraAdmin').value;
-    if (!clave) return mostrarNotificacion('Debes ingresar la clave del Admin.', 'error');
-    const res = await fetch(`${API}/api/verificar-admin`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ password: clave }), credentials: 'include' });
-    if (res.ok) {
+    if(!clave) return mostrarNotificacion('Debes ingresar la clave del Admin.', 'error');
+    const res = await fetch(`${API}/api/verificar-admin`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({password: clave}), credentials: 'include' });
+    if(res.ok) {
         mostrarNotificacion('Acceso a Finanzas concedido.', 'exito');
         document.getElementById('modalClaveAdmin').classList.remove('activo');
         cambiarPestaña('finanzas');
@@ -161,7 +167,7 @@ async function verificarClaveAdmin() {
     }
 }
 
-// ==================== AUDITORÍA EXPANDIBLE ====================
+// ==================== AUDITORÍA ====================
 async function cargarAuditoria() {
     const res = await fetch(`${API}/api/auditoria`, { credentials: 'include' });
     const lista = await res.json();
@@ -176,43 +182,73 @@ async function cargarAuditoria() {
     });
     document.getElementById('tablaAuditoria').innerHTML = html || "<tr><td colspan='3'>No hay actividad registrada.</td></tr>";
 }
-
 function mostrarDetalleAuditoria(accion, detalles, usuario, fecha) {
     mostrarNotificacion(`[${fecha}] ${usuario}\n\nAcción: ${accion}\n\nDetalles: ${detalles}`, 'info');
 }
 
-// ==================== MIEMBROS & SOLICITUDES (Sin cierre de sesión) ====================
+// ==================== MIEMBROS (ESTRUCTURA DE TABLA RESTAURADA) ====================
 async function cargarMiembros() {
     const res = await fetch(`${API}/api/miembros`, { credentials: 'include' });
     const lista = await res.json();
-    document.getElementById('tablaMiembros').innerHTML = lista.map(m =>
-        `<tr><td><strong>${m.codigo}</strong></td><td>${m.nombre}</td><td>${m.telefono || '---'}</td><td><span class="badge badge-propiedad">${m.tipo}</span></td><td>${m.grupo}</td></tr>`
+    document.getElementById('tablaMiembros').innerHTML = lista.map(m => 
+        `<tr>
+            <td><strong>${m.codigo}</strong></td>
+            <td>${m.nombre}</td>
+            <td>${m.telefono || '---'}</td>
+            <td><span class="badge badge-propiedad">${m.tipo}</span></td>
+            <td>${m.grupo}</td>
+        </tr>`
     ).join('');
+}
+
+// ==================== LÓGICA DEL FORMULARIO DINÁMICO (CORREGIDA) ====================
+function toggleLiderazgoPorTipo() {
+    const tipo = document.getElementById('m_tipo').value;
+    const divLiderazgoPregunta = document.getElementById('div_liderazgo_pregunta');
+    const divLiderazgoTexto = document.getElementById('div_liderazgo_texto');
+    
+    if (tipo === 'Propiedad') {
+        divLiderazgoPregunta.style.display = 'block';
+        // Resetear estado al cambiar a Propiedad
+        document.getElementById('m_liderazgo_si').value = 'No';
+        divLiderazgoTexto.style.display = 'none';
+    } else {
+        divLiderazgoPregunta.style.display = 'none';
+        divLiderazgoTexto.style.display = 'none';
+    }
+}
+
+function toggleLiderazgoSiNo() {
+    const val = document.getElementById('m_liderazgo_si').value;
+    document.getElementById('div_liderazgo_texto').style.display = val === 'Si' ? 'block' : 'none';
 }
 
 async function guardarMiembro(e) {
     e.preventDefault();
     const nombre = document.getElementById('m_nombre').value.trim();
     const tipo = document.getElementById('m_tipo').value;
-    if (!nombre) return mostrarNotificacion('El nombre no puede estar vacío.', 'error');
-
-    const esLiderazgo = tipo === 'Propiedad';
-    const liderazgoTexto = esLiderazgo ? document.getElementById('m_liderazgo_texto').value.trim() : null;
-    if (esLiderazgo && !liderazgoTexto) return mostrarNotificacion('Si es Propiedad, debe especificar el liderazgo.', 'error');
+    if(!nombre) return mostrarNotificacion('El nombre no puede estar vacío.', 'error');
+    
+    let liderazgoTexto = null;
+    if (tipo === 'Propiedad') {
+        const esLiderazgo = document.getElementById('m_liderazgo_si').value === 'Si';
+        liderazgoTexto = esLiderazgo ? document.getElementById('m_liderazgo_texto').value.trim() : null;
+        if(esLiderazgo && !liderazgoTexto) return mostrarNotificacion('Si marca Sí, debe especificar el liderazgo.', 'error');
+    }
 
     let grupos = [];
-    if ($('g_Concilio Misionero Femenil').checked) grupos.push('Concilio Misionero Femenil');
-    if ($('g_Misioneritas').checked) grupos.push('Misioneritas');
-    if ($('g_Fraternidad de Varones').checked) grupos.push('Fraternidad de Varones');
-    if ($('g_Exploradores del Rey').checked) grupos.push('Exploradores del Rey');
-    if ($('g_Embajadores de Cristo').checked) grupos.push('Embajadores de Cristo');
+    if($('g_femenil').checked) grupos.push('Concilio Misionero Femenil');
+    if($('g_misioneritas').checked) grupos.push('Misioneritas');
+    if($('g_varones').checked) grupos.push('Fraternidad de Varones');
+    if($('g_exploradores').checked) grupos.push('Exploradores del Rey');
+    if($('g_embajadores').checked) grupos.push('Embajadores de Cristo');
 
     const datos = { nombre: nombre, telefono: $('m_telefono').value.trim() || null, tipo: tipo, grupo: grupos.join(', ') || 'General', liderazgo: liderazgoTexto };
     const esAdminPastor = (rol === 'Administrador' || rol === 'Pastor');
     const url = esAdminPastor ? `${API}/api/miembros` : `${API}/api/solicitudes`;
-
-    const res = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(datos), credentials: 'include' });
-    if (res.ok) {
+    
+    const res = await fetch(url, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(datos), credentials: 'include' });
+    if(res.ok) {
         mostrarNotificacion(esAdminPastor ? 'Miembro registrado con éxito.' : 'Solicitud enviada.', 'exito');
         cerrarModalYLimpiar('modalMiembro');
         cargarMiembros(); // Actualiza DOM sin cerrar sesión
@@ -222,55 +258,21 @@ async function guardarMiembro(e) {
     }
 }
 
-// ==================== ASISTENCIA ====================
-async function cargarAsistencia() {
-    const ahora = new Date();
-    const dias = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
-    const dia = dias[ahora.getDay()];
-    const mapa = { 'Martes': 'Concilio Misionero Femenil', 'Miércoles': 'Misioneritas', 'Jueves': 'Fraternidad de Varones', 'Viernes': 'Exploradores del Rey', 'Sábado': 'Embajadores de Cristo', 'Domingo': 'Culto General' };
-    let grupo = mapa[dia] || '';
-
-    const btnRecargar = document.querySelector('.btn-submit[onclick="cargarAsistencia()"]');
-    if (!grupo) {
-        document.getElementById('diaActual').textContent = dia;
-        document.getElementById('grupoActual').textContent = 'Sin culto hoy';
-        document.getElementById('tablaAsistencia').innerHTML = "<tr><td colspan='5'>Hoy no hay culto.</td></tr>";
-        if (btnRecargar) { btnRecargar.disabled = true; btnRecargar.style.opacity = '0.5'; }
-        return;
-    } else {
-        if (btnRecargar) { btnRecargar.disabled = false; btnRecargar.style.opacity = '1'; }
-    }
-
-    document.getElementById('diaActual').textContent = dia;
-    document.getElementById('grupoActual').textContent = grupo;
-
-    let endpoint = (rol.startsWith('Secretario_') && rol !== 'Secretario_General') ? `${API}/api/asistencia/grupo/${grupo}` : `${API}/api/miembros`;
-    const res = await fetch(endpoint, { credentials: 'include' });
+// ==================== SOLICITUDES ====================
+async function cargarSolicitudes() {
+    const res = await fetch(`${API}/api/solicitudes`, { credentials: 'include' });
     const lista = await res.json();
-    document.getElementById('tablaAsistencia').innerHTML = lista.map(m =>
-        `<tr><td>${m.codigo}</td><td>${m.nombre}</td><td>${m.grupo}</td><td><input type="checkbox" class="asistencia-check" data-id="${m.id}" /></td><td><strong>${m.total_asistencias || 0}</strong></td></tr>`
-    ).join('');
+    document.getElementById('tablaSolicitudes').innerHTML = lista.map(s => `<tr><td>${s.nombre}</td><td><span class="badge badge-pendiente" style="background:#fef3c7;">${s.estado}</span></td><td><button class="btn-submit" style="width:auto; padding:5px 10px; font-size:0.8rem;" onclick="procesarSolicitud(${s.id}, 'Aprobada')">Aprobar</button></td></tr>`).join('');
+}
+async function procesarSolicitud(id, estado) {
+    await fetch(`${API}/api/solicitudes/${id}`, { method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify({estado: estado}), credentials: 'include' });
+    mostrarNotificacion('Solicitud procesada.', 'exito'); cargarSolicitudes(); cargarMiembros();
 }
 
-async function guardarAsistencia() {
-    const checks = document.querySelectorAll('.asistencia-check:checked');
-    if (!checks.length) return mostrarNotificacion('Selecciona al menos un miembro.', 'error');
-    for (const check of checks) {
-        const codigo = check.closest('tr').querySelector('td:first-child').innerText.trim();
-        const res = await fetch(`${API}/api/marcar-asistencia`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ codigo }), credentials: 'include' });
-        if (!res.ok) {
-            const data = await res.json();
-            return mostrarNotificacion(data.error || 'Error al guardar.', 'error');
-        }
-    }
-    mostrarNotificacion('✅ Asistencias guardadas.', 'exito');
-    cargarAsistencia();
-}
-
-// ==================== SANTA CENA ====================
+// ==================== ASISTENCIA Y SANTA CENA ====================
 let intervaloActual = null;
 function iniciarCronometroSantaCena() {
-    if (intervaloActual) clearInterval(intervaloActual);
+    if(intervaloActual) clearInterval(intervaloActual);
     cargarSantaCena();
     intervaloActual = setInterval(() => {
         const hoy = new Date();
@@ -293,7 +295,7 @@ async function cargarSantaCena() {
     const res = await fetch(`${API}/api/miembros`, { credentials: 'include' });
     const lista = await res.json();
     const filtrados = lista.filter(m => m.tipo === 'Propiedad');
-    document.getElementById('tablaSantaCena').innerHTML = filtrados.map(m =>
+    document.getElementById('tablaSantaCena').innerHTML = filtrados.map(m => 
         `<tr><td><strong>${m.codigo}</strong></td><td>${m.nombre}</td><td><input type="checkbox" class="sc-check" data-id="${m.id}" /></td></tr>`
     ).join('');
 }
@@ -303,28 +305,72 @@ async function guardarSantaCena() {
     if (ahora.getDay() !== 0) return mostrarNotificacion('La Santa Cena solo se registra los Domingos.', 'error');
     const fecha = ahora.toISOString().split('T')[0];
     const checks = document.querySelectorAll('.sc-check:checked');
-    if (!checks.length) return mostrarNotificacion('No hay asistentes seleccionados.', 'error');
+    if(!checks.length) return mostrarNotificacion('No hay asistentes seleccionados.', 'error');
     for (const check of checks) {
-        await fetch(`${API}/api/santacena`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ miembro_id: parseInt(check.dataset.id), fecha: fecha, asistio: true }), credentials: 'include' });
+        await fetch(`${API}/api/santacena`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({miembro_id: parseInt(check.dataset.id), fecha: fecha, asistio: true}), credentials: 'include' });
     }
     mostrarNotificacion('✅ Registro de Santa Cena guardado.', 'exito');
 }
 
-// ==================== MODALES Y ADMIN (Sesión estable) ====================
+async function cargarAsistencia() {
+    const ahora = new Date();
+    const dias = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
+    const dia = dias[ahora.getDay()];
+    const mapa = {'Martes':'Concilio Misionero Femenil','Miércoles':'Misioneritas','Jueves':'Fraternidad de Varones','Viernes':'Exploradores del Rey','Sábado':'Embajadores de Cristo','Domingo':'Culto General'};
+    let grupo = mapa[dia] || '';
+    
+    const btnRecargar = document.querySelector('.btn-submit[onclick="cargarAsistencia()"]');
+    if(!grupo) {
+        document.getElementById('diaActual').textContent = dia;
+        document.getElementById('grupoActual').textContent = 'Sin culto hoy';
+        document.getElementById('tablaAsistencia').innerHTML = "<tr><td colspan='5'>Hoy no hay culto.</td></tr>";
+        if(btnRecargar) { btnRecargar.disabled = true; btnRecargar.style.opacity = '0.5'; }
+        return;
+    } else {
+        if(btnRecargar) { btnRecargar.disabled = false; btnRecargar.style.opacity = '1'; }
+    }
+
+    document.getElementById('diaActual').textContent = dia;
+    document.getElementById('grupoActual').textContent = grupo;
+
+    let endpoint = (rol.startsWith('Secretario_') && rol !== 'Secretario_General') ? `${API}/api/asistencia/grupo/${grupo}` : `${API}/api/miembros`;
+    const res = await fetch(endpoint, { credentials: 'include' });
+    const lista = await res.json();
+    document.getElementById('tablaAsistencia').innerHTML = lista.map(m => 
+        `<tr><td>${m.codigo}</td><td>${m.nombre}</td><td>${m.grupo}</td><td><input type="checkbox" class="asistencia-check" data-id="${m.id}" /></td><td><strong>${m.total_asistencias || 0}</strong></td></tr>`
+    ).join('');
+}
+
+async function guardarAsistencia() {
+    const checks = document.querySelectorAll('.asistencia-check:checked');
+    if(!checks.length) return mostrarNotificacion('Selecciona al menos un miembro.', 'error');
+    for (const check of checks) {
+        const codigo = check.closest('tr').querySelector('td:first-child').innerText.trim();
+        const res = await fetch(`${API}/api/marcar-asistencia`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({codigo}), credentials: 'include' });
+        if(!res.ok) {
+            const data = await res.json();
+            return mostrarNotificacion(data.error || 'Error al guardar.', 'error');
+        }
+    }
+    mostrarNotificacion('✅ Asistencias guardadas.', 'exito');
+    cargarAsistencia();
+}
+
+// ==================== MODALES Y ADMIN ====================
 async function abrirModalEliminar() {
     document.getElementById('inputEliminarCodigo').value = ''; document.getElementById('textoConfirmacionEliminar').innerHTML = '';
     document.getElementById('modalEliminar').classList.add('activo');
 }
 async function buscarYEliminar() {
     const codigo = document.getElementById('inputEliminarCodigo').value.trim();
-    if (!codigo) return mostrarNotificacion('Ingresa un código.', 'error');
+    if(!codigo) return mostrarNotificacion('Ingresa un código.', 'error');
     const res = await fetch(`${API}/api/miembros/${codigo}`, { credentials: 'include' });
-    if (res.status === 404) return mostrarNotificacion('El código ingresado no pertenece a ningún miembro.', 'error');
+    if(res.status === 404) return mostrarNotificacion('El código ingresado no pertenece a ningún miembro.', 'error');
     const data = await res.json();
-    if (!confirm(`¿Estás seguro que quieres eliminar al hermano ${data.nombre}?`)) return;
-    const delRes = await fetch(`${API}/api/miembros/${codigo}`, { method: 'DELETE', credentials: 'include' });
-    if (delRes.ok) {
-        mostrarNotificacion('Miembro eliminado.', 'exito');
+    if(!confirm(`¿Estás seguro que quieres eliminar al hermano ${data.nombre}?`)) return;
+    const delRes = await fetch(`${API}/api/miembros/${codigo}`, { method:'DELETE', credentials: 'include' });
+    if(delRes.ok) {
+        mostrarNotificacion('Miembro eliminado y códigos reordenados.', 'exito');
         cerrarModalYLimpiar('modalEliminar');
         cargarMiembros();
     } else { const err = await delRes.json(); mostrarNotificacion(err.error, 'error'); }
@@ -339,9 +385,9 @@ async function abrirModalActualizar() {
 }
 async function buscarParaActualizar() {
     const codigo = document.getElementById('inputActualizarCodigo').value.trim();
-    if (!codigo) return mostrarNotificacion('Ingresa un código.', 'error');
+    if(!codigo) return mostrarNotificacion('Ingresa un código.', 'error');
     const res = await fetch(`${API}/api/miembros/${codigo}`, { credentials: 'include' });
-    if (res.status === 404) return mostrarNotificacion('El código ingresado no pertenece a ningún miembro.', 'error');
+    if(res.status === 404) return mostrarNotificacion('El código ingresado no pertenece a ningún miembro.', 'error');
     const data = await res.json();
     document.getElementById('inputActualizarCodigo').style.display = 'none';
     document.getElementById('btnBuscarActualizar').style.display = 'none';
@@ -351,9 +397,9 @@ async function buscarParaActualizar() {
     document.getElementById('m_actualizar_telefono').value = data.telefono || '';
     document.getElementById('m_actualizar_tipo').value = data.tipo;
     document.getElementById('m_actualizar_grupo').value = data.grupo;
-
+    
     const match = data.nombre.match(/\((.*)\)/);
-    if (match && match[1]) {
+    if(match && match[1]) {
         document.getElementById('m_actualizar_liderazgo_si').value = 'Si';
         document.getElementById('m_actualizar_liderazgo_texto').value = match[1];
         document.getElementById('div_actualizar_liderazgo_texto').style.display = 'block';
@@ -370,7 +416,7 @@ async function guardarActualizacion() {
     const codigo = document.getElementById('inputActualizarCodigo').value.trim();
     const liderazgoSi = document.getElementById('m_actualizar_liderazgo_si').value === 'Si';
     const liderazgoTexto = document.getElementById('m_actualizar_liderazgo_texto').value.trim();
-    if (liderazgoSi && !liderazgoTexto) return mostrarNotificacion('Debes especificar el liderazgo.', 'error');
+    if(liderazgoSi && !liderazgoTexto) return mostrarNotificacion('Debes especificar el liderazgo.', 'error');
 
     const datos = {
         nombre: document.getElementById('m_actualizar_nombre').value.trim(),
@@ -379,10 +425,10 @@ async function guardarActualizacion() {
         grupo: document.getElementById('m_actualizar_grupo').value,
         liderazgo: liderazgoSi ? liderazgoTexto : null
     };
-    if (!datos.nombre) return mostrarNotificacion('El nombre no puede estar vacío.', 'error');
+    if(!datos.nombre) return mostrarNotificacion('El nombre no puede estar vacío.', 'error');
 
-    const res = await fetch(`${API}/api/miembros/${codigo}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(datos), credentials: 'include' });
-    if (res.ok) {
+    const res = await fetch(`${API}/api/miembros/${codigo}`, { method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify(datos), credentials: 'include' });
+    if(res.ok) {
         mostrarNotificacion('Información actualizada.', 'exito');
         cerrarModalYLimpiar('modalActualizar');
         cargarMiembros(); // Refresca la lista sin expulsar al usuario
@@ -400,7 +446,11 @@ function cerrarModalYLimpiar(modalId) {
         else if (input.tagName === 'SELECT') input.selectedIndex = 0;
         else input.value = '';
     });
-    if (modalId === 'modalMiembro') { document.getElementById('div_liderazgo_texto').style.display = 'none'; document.getElementById('formMiembroModal').reset(); }
+    if (modalId === 'modalMiembro') {
+        document.getElementById('div_liderazgo_pregunta').style.display = 'none';
+        document.getElementById('div_liderazgo_texto').style.display = 'none';
+        document.getElementById('formMiembroModal').reset();
+    }
     if (modalId === 'modalEliminar') document.getElementById('textoConfirmacionEliminar').innerHTML = '';
     if (modalId === 'modalActualizar') { document.getElementById('formActualizarModal').style.display = 'none'; document.getElementById('inputActualizarCodigo').style.display = 'block'; document.getElementById('btnBuscarActualizar').style.display = 'inline-block'; document.getElementById('btnGuardarActualizar').style.display = 'none'; document.getElementById('div_actualizar_liderazgo_texto').style.display = 'none'; }
 }

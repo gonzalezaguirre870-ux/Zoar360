@@ -4,7 +4,7 @@ let esModoOscuro = false;
 
 const $ = id => document.getElementById(id);
 
-// Mapeo de Roles para el Dropdown
+// MAPEO DE ROLES, MINISTERIOS Y GÉNEROS (Estricto)
 const MAPA_ROLES = {
     'Secretaria_Embajadores_de_Cristo': { ministerio: 'Embajadores de Cristo', rol: 'Secretaria' },
     'Secretario_Fraternidad_de_Varones': { ministerio: 'Fraternidad de Varones', rol: 'Secretario' },
@@ -12,11 +12,10 @@ const MAPA_ROLES = {
     'Secretario_Misioneritas': { ministerio: 'Misioneritas', rol: 'Secretaria' },
     'Secretaria_Concilio_Misionero_Femenil': { ministerio: 'Concilio Misionero Femenil', rol: 'Secretaria' },
     'Secretario_General': { ministerio: 'Culto General', rol: 'Secretario General' },
-    'Pastor': { ministerio: 'Pastor', rol: 'Pastor' },
+    'Pastor': { ministerio: 'pastor', rol: 'pastor' }, // En minúsculas como pediste
     'Administrador': { ministerio: 'Administración', rol: 'Administrador' }
 };
 
-// ==================== NOTIFICACIONES ====================
 const mostrarNotificacion = (mensaje, tipo = 'error') => {
     const icono = tipo === 'exito' ? '✅' : tipo === 'info' ? 'ℹ️' : '⚠️';
     document.getElementById('iconoNotificacion').textContent = icono;
@@ -24,18 +23,25 @@ const mostrarNotificacion = (mensaje, tipo = 'error') => {
     document.getElementById('modalNotificacion').classList.add('activo');
 };
 
-// ==================== DROPDOWN ====================
+// ==================== DROPDOWN Y CIERRE DE MENÚ ====================
 function toggleDropdown() { document.getElementById('headerUser').classList.toggle('abierto'); }
 
-// ==================== Lógica de Catecúmeno (Ocultar Liderazgo) ====================
-function toggleLiderazgoPorTipo() {
-    const tipo = document.getElementById('m_tipo').value;
-    document.getElementById('div_liderazgo_texto').style.display = tipo === 'Propiedad' ? 'block' : 'none';
-}
-function toggleActualizarLiderazgoPorTipo() {
-    const tipo = document.getElementById('m_actualizar_tipo').value;
-    document.getElementById('div_actualizar_liderazgo_texto').style.display = tipo === 'Propiedad' ? 'block' : 'none';
-}
+// Cierra el menú móvil al hacer clic fuera, en el botón de menú o en una opción
+document.addEventListener('click', function (e) {
+    const sidebar = document.getElementById('sidebarNav');
+    const menuBtn = document.getElementById('btnMenuMovil');
+    const isClickInsideMenu = sidebar.contains(e.target);
+    const isClickOnMenuBtn = menuBtn.contains(e.target);
+
+    if (!isClickInsideMenu && !isClickOnMenuBtn && document.body.classList.contains('sidebar-abierto')) {
+        document.body.classList.remove('sidebar-abierto');
+    }
+});
+document.querySelectorAll('#sidebarNav .tab-btn, #sidebarNav .btn-about').forEach(btn => {
+    btn.addEventListener('click', () => {
+        if (window.innerWidth <= 768) document.body.classList.remove('sidebar-abierto');
+    });
+});
 
 // ==================== NAVEGACIÓN ====================
 document.addEventListener('DOMContentLoaded', () => {
@@ -66,7 +72,7 @@ const cambiarPestaña = id => {
     if (id === 'auditoria') cargarAuditoria();
 };
 
-// ==================== LOGIN Y FECHA ====================
+// ==================== LOGIN Y SEGURIDAD POR DESENFOQUE ====================
 async function iniciarSesion(e) {
     e.preventDefault();
     try {
@@ -85,15 +91,15 @@ async function iniciarSesion(e) {
         document.getElementById('pantallaLogin').style.display = 'none';
         document.getElementById('appPrincipal').style.display = 'block';
 
-        // Fecha dinámica
         const fecha = new Date().toLocaleDateString('es-ES', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
         document.getElementById('fechaHeader').textContent = fecha;
 
-        // Configuración del Dropdown de Perfil (Texto limpio)
+        // Formateo del Dropdown (Nuevas líneas independientes)
         const info = MAPA_ROLES[rol] || { ministerio: 'General', rol: rol };
         document.getElementById('nombreUsuarioHeader').textContent = info.rol;
+        document.getElementById('rolUsuarioDropdown').textContent = info.rol;
+        document.getElementById('ministerioUsuarioDropdown').textContent = info.ministerio;
         document.getElementById('correoUsuarioDropdown').textContent = data.email;
-        document.getElementById('rolUsuarioDropdown').textContent = `${info.ministerio} | ${info.rol}`;
 
         const esAdminPastor = (rol === 'Administrador' || rol === 'Pastor');
         const esSecretarioGeneral = (rol === 'Secretario_General');
@@ -108,7 +114,7 @@ async function iniciarSesion(e) {
         document.getElementById('btnSantaCena').style.display = (esAdminPastor || esSecretarioGeneral) ? 'flex' : 'none';
 
         if (esSecretarioGrupo) {
-            // Limpieza total de menús para grupos
+            // Eliminación completa de Membresía y demás para grupos
             document.getElementById('btnMembresia').style.display = 'none';
             document.getElementById('btnSantaCena').style.display = 'none';
             document.getElementById('btnEliminarAdmin').style.display = 'none';
@@ -128,9 +134,20 @@ async function iniciarSesion(e) {
     } catch { mostrarNotificacion('Error de conexión con el servidor.', 'error'); }
 }
 
+// Seguridad por desenfoque (Reactividad)
+window.addEventListener('beforeunload', () => {
+    if (rol !== 'Administrador') sessionStorage.removeItem('zoar360_user');
+});
+document.addEventListener('visibilitychange', () => {
+    if (document.hidden && rol !== 'Administrador') {
+        sessionStorage.removeItem('zoar360_user');
+        window.location.href = window.location.href;
+    }
+});
+
 function cerrarSesion() { sessionStorage.clear(); if (rol !== 'Administrador') localStorage.clear(); window.location.href = window.location.href; }
 
-// ==================== CLAVE ADMIN (Modal Finanzas) ====================
+// ==================== CLAVE ADMIN ====================
 async function verificarClaveAdmin() {
     const clave = document.getElementById('inputContraAdmin').value;
     if (!clave) return mostrarNotificacion('Debes ingresar la clave del Admin.', 'error');
@@ -144,7 +161,7 @@ async function verificarClaveAdmin() {
     }
 }
 
-// ==================== AUDITORÍA ====================
+// ==================== AUDITORÍA EXPANDIBLE ====================
 async function cargarAuditoria() {
     const res = await fetch(`${API}/api/auditoria`, { credentials: 'include' });
     const lista = await res.json();
@@ -153,15 +170,18 @@ async function cargarAuditoria() {
         const fecha = new Date(n.fecha_hora);
         const fechaStr = fecha.toLocaleDateString('es-ES');
         const horaStr = fecha.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
-        // Detalle expandible
-        html += `<tr onclick="alert('Detalles: ${n.detalles || 'Sin detalles adicionales'}')" style="cursor:pointer;">
+        html += `<tr onclick="mostrarDetalleAuditoria('${n.accion}', '${n.detalles || 'Sin detalles adicionales'}', '${n.usuario_correo}', '${fechaStr} ${horaStr}')" style="cursor:pointer;">
             <td>${fechaStr} ${horaStr}</td><td>${n.usuario_correo}</td><td>${n.accion}</td>
         </tr>`;
     });
     document.getElementById('tablaAuditoria').innerHTML = html || "<tr><td colspan='3'>No hay actividad registrada.</td></tr>";
 }
 
-// ==================== MIEMBROS & SOLICITUDES (Sesión estable) ====================
+function mostrarDetalleAuditoria(accion, detalles, usuario, fecha) {
+    mostrarNotificacion(`[${fecha}] ${usuario}\n\nAcción: ${accion}\n\nDetalles: ${detalles}`, 'info');
+}
+
+// ==================== MIEMBROS & SOLICITUDES (Sin cierre de sesión) ====================
 async function cargarMiembros() {
     const res = await fetch(`${API}/api/miembros`, { credentials: 'include' });
     const lista = await res.json();
@@ -187,11 +207,7 @@ async function guardarMiembro(e) {
     if ($('g_exploradores').checked) grupos.push('Exploradores del Rey');
     if ($('g_embajadores').checked) grupos.push('Embajadores de Cristo');
 
-    const datos = {
-        nombre: nombre, telefono: $('m_telefono').value.trim() || null,
-        tipo: tipo, grupo: grupos.join(', ') || 'General', liderazgo: liderazgoTexto
-    };
-
+    const datos = { nombre: nombre, telefono: $('m_telefono').value.trim() || null, tipo: tipo, grupo: grupos.join(', ') || 'General', liderazgo: liderazgoTexto };
     const esAdminPastor = (rol === 'Administrador' || rol === 'Pastor');
     const url = esAdminPastor ? `${API}/api/miembros` : `${API}/api/solicitudes`;
 
@@ -204,18 +220,6 @@ async function guardarMiembro(e) {
         const err = await res.json();
         mostrarNotificacion(err.error || 'Error al guardar.', 'error');
     }
-}
-
-async function cargarSolicitudes() {
-    const res = await fetch(`${API}/api/solicitudes`, { credentials: 'include' });
-    const lista = await res.json();
-    document.getElementById('tablaSolicitudes').innerHTML = lista.map(s => `<tr><td>${s.nombre}</td><td><span class="badge badge-pendiente" style="background:#fef3c7;">${s.estado}</span></td><td><button class="btn-submit" style="width:auto; padding:5px 10px; font-size:0.8rem;" onclick="procesarSolicitud(${s.id}, 'Aprobada')">Aprobar</button></td></tr>`).join('');
-}
-
-async function procesarSolicitud(id, estado) {
-    await fetch(`${API}/api/solicitudes/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ estado: estado }), credentials: 'include' });
-    mostrarNotificacion('Solicitud procesada.', 'exito');
-    cargarSolicitudes(); cargarMiembros();
 }
 
 // ==================== ASISTENCIA ====================

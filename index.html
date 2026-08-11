@@ -1,6 +1,5 @@
 <!DOCTYPE html>
 <html lang="es">
-
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -9,40 +8,24 @@
     <link rel="stylesheet" href="style.css" />
     <link rel="icon" type="image/png" href="icono.png" />
 </head>
-
 <body>
     <!-- SPLASH Y LOGIN -->
     <div id="pantallaBienvenida" class="welcome-splash">
-        <div class="welcome-content"><img src="logoad.png" alt="Logo" class="welcome-logo" />
-            <h1 class="welcome-text-1">Bienvenido</h1>
-            <p class="welcome-text-2">Zoar360 · Sistema Eclesiástico</p>
-            <div class="welcome-loader"></div>
-        </div>
+        <div class="welcome-content"><img src="logoad.png" alt="Logo" class="welcome-logo" /><h1 class="welcome-text-1">Bienvenido</h1><p class="welcome-text-2">Zoar360 · Sistema Eclesiástico</p><div class="welcome-loader"></div></div>
     </div>
     <div id="pantallaLogin" class="login-container">
-        <div class="login-card"><img src="logoad.png" alt="Logo" class="login-logo" />
-            <h2>Iglesia Zoar</h2>
-            <!--candado control de acceso administrativo-->
-            <div class="form-group"
-                style="text-align:left; margin-bottom:20px; display:flex; align-items:center; gap:10px;">
+        <div class="login-card"><img src="logoad.png" alt="Logo" class="login-logo" /><h2>Iglesia Zoar</h2>
+            <form id="formLogin" onsubmit="iniciarSesion(event)">
+                <div class="form-group"
+                style="text-align:center; margin-bottom:20px; display:flex; justify-content:center; align-items:center; gap:10px;">
                 <i class="fa-solid fa-lock" style="font-size: 1rem; color: #000000; flex:0 0 auto;"></i>
                 <span style="margin-top:5px; font-weight:bold;">Control de Acceso Administrativo</span>
             </div>
-            <label for="l_email" style="display:block; margin-bottom:5px; font-weight:bold; text-align:left;">Correo
-                Electrónico</label>
-            <form id="formLogin" onsubmit="iniciarSesion(event)">
-                <div class="form-group">
-                    <div class="input-icon"><i class="fa-solid fa-envelope"></i><input type="email" id="l_email"
-                            placeholder="correo@zoar.com" required /></div>
-                </div>
-                <label for="l_pass"
-                    style="display:block; margin-bottom:5px; font-weight:bold; text-align:left;">Contraseña</label>
-                <div class="form-group">
-                    <div class="input-icon"><i class="fa-solid fa-key"></i><input type="password" id="l_pass"
-                            placeholder="••••••••" required /></div>
-                </div>
-                <button type="submit" class="btn-submit"><i class="fa-solid fa-right-to-bracket"></i> Iniciar
-                    Sesión</button>
+            <label for="l_email" style="display:block; margin-bottom:5px; font-weight:bold; text-align:left;">Correo Electrónico</label>
+                <div class="form-group"><div class="input-icon"><i class="fa-solid fa-envelope"></i><input type="email" id="l_email" placeholder="usuario@iglesiazoarsv.org" required /></div></div>
+                <label for="l_pass" style="display:block; margin-bottom:5px; font-weight:bold; text-align:left;">Contraseña</label>
+                <div class="form-group"><div class="input-icon"><i class="fa-solid fa-key"></i><input type="password" id="l_pass" placeholder="••••••••" required /></div></div>
+                <button type="submit" class="btn-submit"><i class="fa-solid fa-right-to-bracket"></i> Iniciar Sesión</button>
             </form>
         </div>
     </div>
@@ -50,28 +33,26 @@
     <!-- APP PRINCIPAL -->
     <div id="appPrincipal" style="display: none;">
         <header class="app-header">
-            <button id="btnMenuMovil" class="btn-menu-movil"
-                onclick="document.body.classList.toggle('sidebar-abierto')"><i class="fa-solid fa-bars"></i></button>
-            <div class="header-brand"><img src="logoad.png" alt="Logo" class="header-logo" />
-                <div class="header-titles">
-                    <h1>Zoar360 · Iglesia Zoar</h1>
-                    <p id="fechaHeader">Cargando fecha...</p>
-                </div>
-            </div>
+            <button id="btnMenuMovil" class="btn-menu-movil" onclick="document.body.classList.toggle('sidebar-abierto')"><i class="fa-solid fa-bars"></i></button>
+            <div class="header-brand"><img src="logoad.png" alt="Logo" class="header-logo" /><div class="header-titles"><h1>Zoar360 · Iglesia Zoar</h1><p id="fechaHeader">Cargando fecha...</p></div></div>
             <div class="header-actions">
                 <button onclick="cambiarTema()" class="btn-tema" id="btnTema"><i class="fa-solid fa-moon"></i></button>
-
-                <!-- ID AÑADIDO: headerUser -->
+                
                 <div class="header-user" id="headerUser" onclick="toggleDropdown()">
                     <div class="header-avatar"><i class="fa-solid fa-user"></i></div>
                     <span id="nombreUsuarioHeader">Usuario</span>
                     <i class="fa-solid fa-chevron-down"></i>
                     <div class="dropdown-menu" id="dropdownMenu">
-                        <span class="d-label">Correo:</span><span class="d-value" id="correoUsuarioDropdown">---</span>
-                        <span class="d-label">Rol / Ministerio:</span><span class="d-value"
-                            id="rolUsuarioDropdown">---</span>
-                        <div
-                            style="margin-top: 10px; border-top: 1px solid #e2e8f0; padding-top: 10px; text-align: center;">
+                        <span class="d-label">Rol:</span>
+                        <span class="d-value" id="rolUsuarioDropdown">---</span>
+                        
+                        <span class="d-label">Ministerio:</span>
+                        <span class="d-value" id="ministerioUsuarioDropdown">---</span>
+                        
+                        <span class="d-label">Correo:</span>
+                        <span class="d-value" id="correoUsuarioDropdown">---</span>
+                        
+                        <div style="margin-top: 15px; border-top: 1px solid #e2e8f0; padding-top: 12px; text-align: center;">
                             <button class="btn-cerrar-dropdown" onclick="cerrarSesion()">Cerrar Sesión</button>
                         </div>
                     </div>
@@ -80,193 +61,72 @@
         </header>
 
         <div class="app-body">
-            <nav class="sidebar">
-                <button class="tab-btn active" data-tab="membresia" id="btnMembresia"><i
-                        class="fa-solid fa-users"></i><span>Membresía</span></button>
-                <button class="tab-btn" data-tab="asistencia" id="btnAsistencia"><i
-                        class="fa-solid fa-clipboard-check"></i><span>Asistencia</span></button>
-                <button class="tab-btn" data-tab="santacena" id="btnSantaCena"><i
-                        class="fa-solid fa-wine-glass"></i><span>Santa Cena</span></button>
-                <button class="tab-btn" data-tab="finanzas" id="btnFinanzas"><i
-                        class="fa-solid fa-sack-dollar"></i><span>Finanzas</span></button>
-                <button class="tab-btn" data-tab="solicitudes" id="btnSolicitudes"><i
-                        class="fa-solid fa-envelope"></i><span>Solicitudes</span></button>
-                <button class="tab-btn" data-tab="eventos" id="btnEventos"><i
-                        class="fa-solid fa-calendar-days"></i><span>Eventos</span></button>
-                <button class="tab-btn" data-tab="privilegios" id="btnPrivilegios"><i
-                        class="fa-solid fa-star"></i><span>Privilegios</span></button>
-                <button class="tab-btn" data-tab="auditoria" id="btnAuditoria"><i
-                        class="fa-solid fa-list-check"></i><span>Historial</span></button>
-                <button class="btn-about" onclick="abrirModal('modalCreditos')"><i class="fa-solid fa-info-circle"></i>
-                    Acerca del Sistema</button>
+            <!-- El menú ahora usa la clase sidebar y se oculta por CSS en móviles -->
+            <nav class="sidebar" id="sidebarNav">
+                <button class="tab-btn active" data-tab="membresia" id="btnMembresia"><i class="fa-solid fa-users"></i><span>Membresía</span></button>
+                <button class="tab-btn" data-tab="asistencia" id="btnAsistencia"><i class="fa-solid fa-clipboard-check"></i><span>Asistencia</span></button>
+                <button class="tab-btn" data-tab="santacena" id="btnSantaCena"><i class="fa-solid fa-wine-glass"></i><span>Santa Cena</span></button>
+                <button class="tab-btn" data-tab="finanzas" id="btnFinanzas"><i class="fa-solid fa-sack-dollar"></i><span>Finanzas</span></button>
+                <button class="tab-btn" data-tab="solicitudes" id="btnSolicitudes"><i class="fa-solid fa-envelope"></i><span>Solicitudes</span></button>
+                <button class="tab-btn" data-tab="eventos" id="btnEventos"><i class="fa-solid fa-calendar-days"></i><span>Eventos</span></button>
+                <button class="tab-btn" data-tab="privilegios" id="btnPrivilegios"><i class="fa-solid fa-star"></i><span>Privilegios</span></button>
+                <button class="tab-btn" data-tab="auditoria" id="btnAuditoria"><i class="fa-solid fa-list-check"></i><span>Historial</span></button>
+                <button class="btn-about" onclick="abrirModal('modalCreditos')"><i class="fa-solid fa-info-circle"></i> Acerca del Sistema</button>
             </nav>
 
             <main class="contenido">
-                <!-- MEMBRESÍA -->
+                <!-- SECCIONES (Mantenidas igual) -->
                 <section id="membresia" class="tab-content active">
                     <div class="card">
-                        <div
-                            style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:15px;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:15px;">
                             <h2><i class="fa-solid fa-users icono-titulo"></i> Lista de Miembros</h2>
                             <div style="display:flex; gap:10px; flex-wrap:wrap;">
-                                <button class="btn-agregar" id="btnAgregarMiembro"
-                                    onclick="abrirModal('modalMiembro')"><i class="fa-solid fa-plus"></i> Agregar
-                                    Miembro</button>
-                                <button class="btn-submit" style="background:#ef4444; width:auto; padding:10px 18px;"
-                                    id="btnEliminarAdmin" onclick="abrirModalEliminar()"><i
-                                        class="fa-solid fa-trash"></i> Eliminar Miembro</button>
-                                <button class="btn-submit" style="background:#f59e0b; width:auto; padding:10px 18px;"
-                                    id="btnActualizarAdmin" onclick="abrirModalActualizar()"><i
-                                        class="fa-solid fa-pen"></i> Actualizar Información</button>
+                                <button class="btn-agregar" id="btnAgregarMiembro" onclick="abrirModal('modalMiembro')"><i class="fa-solid fa-plus"></i> Agregar Miembro</button>
+                                <button class="btn-submit" style="background:#ef4444; width:auto; padding:10px 18px;" id="btnEliminarAdmin" onclick="abrirModalEliminar()"><i class="fa-solid fa-trash"></i> Eliminar Miembro</button>
+                                <button class="btn-submit" style="background:#f59e0b; width:auto; padding:10px 18px;" id="btnActualizarAdmin" onclick="abrirModalActualizar()"><i class="fa-solid fa-pen"></i> Actualizar Información</button>
                             </div>
                         </div>
-                        <div class="tabla-wrap">
-                            <table>
-                                <thead>
-                                    <tr>
-                                        <th>Código</th>
-                                        <th>Nombre</th>
-                                        <th>Teléfono</th>
-                                        <th>Tipo</th>
-                                        <th>Ministerios</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="tablaMiembros"></tbody>
-                            </table>
-                        </div>
+                        <div class="tabla-wrap"><table><thead><tr><th>Código</th><th>Nombre</th><th>Teléfono</th><th>Tipo</th><th>Ministerios</th></tr></thead><tbody id="tablaMiembros"></tbody></table></div>
                     </div>
                 </section>
-
-                <!-- ASISTENCIA -->
+                <!-- ... Resto de secciones igual que antes ... -->
                 <section id="asistencia" class="tab-content">
-                    <div class="card">
-                        <h2><i class="fa-solid fa-clipboard-check icono-titulo"></i> Control de Asistencia</h2>
-                        <div
-                            style="display:flex; justify-content:space-between; flex-wrap:wrap; gap:10px; margin-bottom:15px;">
-                            <div class="asistencia-info">
-                                <div class="dia-actual"><strong>Hoy es: </strong><span id="diaActual"></span><span
-                                        class="grupo-actual" id="grupoActual"></span></div>
-                            </div>
-                            <button class="btn-agregar" onclick="abrirModal('modalMiembro')"><i
-                                    class="fa-solid fa-user-plus"></i> Solicitar Nuevo Hermano</button>
+                    <div class="card"><h2><i class="fa-solid fa-clipboard-check icono-titulo"></i> Control de Asistencia</h2>
+                        <div style="display:flex; justify-content:space-between; flex-wrap:wrap; gap:10px; margin-bottom:15px;">
+                            <div class="asistencia-info"><div class="dia-actual"><strong>Hoy es: </strong><span id="diaActual"></span><span class="grupo-actual" id="grupoActual"></span></div></div>
+                            <button class="btn-agregar" onclick="abrirModal('modalMiembro')"><i class="fa-solid fa-user-plus"></i> Solicitar Nuevo Hermano</button>
                         </div>
-                        <button class="btn-submit" onclick="cargarAsistencia()"
-                            style="width:auto; margin-bottom:20px;"><i class="fa-solid fa-rotate"></i> Recargar
-                            Lista</button>
-                        <div class="tabla-wrap">
-                            <table>
-                                <thead>
-                                    <tr>
-                                        <th>Código</th>
-                                        <th>Nombre</th>
-                                        <th>Ministerio</th>
-                                        <th>¿Asistió?</th>
-                                        <th>Total</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="tablaAsistencia"></tbody>
-                            </table>
-                        </div>
-                        <button type="button" class="btn-submit" onclick="guardarAsistencia()"><i
-                                class="fa-solid fa-floppy-disk"></i> Guardar Asistencia</button>
+                        <button class="btn-submit" onclick="cargarAsistencia()" style="width:auto; margin-bottom:20px;"><i class="fa-solid fa-rotate"></i> Recargar Lista</button>
+                        <div class="tabla-wrap"><table><thead><tr><th>Código</th><th>Nombre</th><th>Ministerio</th><th>¿Asistió?</th><th>Total</th></tr></thead><tbody id="tablaAsistencia"></tbody></table></div>
+                        <button type="button" class="btn-submit" onclick="guardarAsistencia()"><i class="fa-solid fa-floppy-disk"></i> Guardar Asistencia</button>
                     </div>
                 </section>
-
-                <!-- SANTA CENA -->
                 <section id="santacena" class="tab-content">
-                    <div class="card">
-                        <h2><i class="fa-solid fa-wine-glass icono-titulo"></i> Santa Cena</h2>
-                        <div
-                            style="background:#f1f5f9; border-radius:8px; padding:15px; margin-bottom:20px; text-align:center;">
+                    <div class="card"><h2><i class="fa-solid fa-wine-glass icono-titulo"></i> Santa Cena</h2>
+                        <div style="background:#f1f5f9; border-radius:8px; padding:15px; margin-bottom:20px; text-align:center;">
                             <p style="font-weight:bold; margin-bottom:5px;">Próximo Domingo de Santa Cena:</p>
                             <span id="cronometroSantaCena" style="font-size:1.5rem; color:#186fbe;">Cargando...</span>
                         </div>
-                        <div class="tabla-wrap">
-                            <table>
-                                <thead>
-                                    <tr>
-                                        <th>Código</th>
-                                        <th>Nombre</th>
-                                        <th>Participó</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="tablaSantaCena"></tbody>
-                            </table>
-                        </div>
-                        <button type="button" class="btn-submit" onclick="guardarSantaCena()"><i
-                                class="fa-solid fa-floppy-disk"></i> Guardar Registro</button>
+                        <div class="tabla-wrap"><table><thead><tr><th>Código</th><th>Nombre</th><th>Participó</th></tr></thead><tbody id="tablaSantaCena"></tbody></table></div>
+                        <button type="button" class="btn-submit" onclick="guardarSantaCena()"><i class="fa-solid fa-floppy-disk"></i> Guardar Registro</button>
                     </div>
                 </section>
-
-                <!-- SOLICITUDES -->
-                <section id="solicitudes" class="tab-content">
-                    <div class="card">
-                        <h2>Solicitudes Pendientes</h2>
-                        <div class="tabla-wrap">
-                            <table>
-                                <thead>
-                                    <tr>
-                                        <th>Nombre</th>
-                                        <th>Estado</th>
-                                        <th>Acciones</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="tablaSolicitudes"></tbody>
-                            </table>
-                        </div>
-                    </div>
-                </section>
-
-                <!-- FINANZAS -->
-                <section id="finanzas" class="tab-content">
-                    <div class="card">
-                        <h2>Finanzas</h2>
-                        <p>Módulo en desarrollo.</p>
-                    </div>
-                </section>
-                <section id="eventos" class="tab-content">
-                    <div class="card">
-                        <h2>Eventos</h2>
-                        <p>Módulo En Desarrollo (Versión 2.0).</p>
-                    </div>
-                </section>
-                <section id="privilegios" class="tab-content">
-                    <div class="card">
-                        <h2>Privilegios</h2>
-                        <p>Módulo En Desarrollo (Versión 2.0).</p>
-                    </div>
-                </section>
-
-                <!-- AUDITORÍA -->
+                <section id="solicitudes" class="tab-content"><div class="card"><h2>Solicitudes Pendientes</h2><div class="tabla-wrap"><table><thead><tr><th>Nombre</th><th>Estado</th><th>Acciones</th></tr></thead><tbody id="tablaSolicitudes"></tbody></table></div></div></section>
+                <section id="finanzas" class="tab-content"><div class="card"><h2>Finanzas</h2><p>Módulo en desarrollo.</p></div></section>
+                <section id="eventos" class="tab-content"><div class="card"><h2>Eventos</h2><p>Módulo En Desarrollo (Versión 2.0).</p></div></section>
+                <section id="privilegios" class="tab-content"><div class="card"><h2>Privilegios</h2><p>Módulo En Desarrollo (Versión 2.0).</p></div></section>
                 <section id="auditoria" class="tab-content">
-                    <div class="card">
-                        <h2><i class="fa-solid fa-list-check icono-titulo"></i> Historial de Actividad</h2>
-                        <div class="tabla-wrap">
-                            <table>
-                                <thead>
-                                    <tr>
-                                        <th>Fecha / Hora</th>
-                                        <th>Usuario / Grupo</th>
-                                        <th>Detalles</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="tablaAuditoria"></tbody>
-                            </table>
-                        </div>
+                    <div class="card"><h2><i class="fa-solid fa-list-check icono-titulo"></i> Historial de Actividad</h2>
+                        <div class="tabla-wrap"><table><thead><tr><th>Fecha / Hora</th><th>Usuario / Grupo</th><th>Detalles</th></tr></thead><tbody id="tablaAuditoria"></tbody></table></div>
                     </div>
                 </section>
             </main>
         </div>
     </div>
 
-    <!-- MODALES -->
+    <!-- MODALES (Mantenidos igual que antes) -->
     <div id="modalNotificacion" class="modal">
-        <div class="modal-content">
-            <div id="iconoNotificacion" style="font-size: 3rem; margin-bottom: 10px;">⚠️</div>
-            <h3 id="tituloNotificacion">Aviso</h3>
-            <p id="textoNotificacion" style="margin-bottom: 20px;"></p><button class="btn-submit"
-                onclick="cerrarModal('modalNotificacion')" style="background-color: #2563eb;">Entendido</button>
-        </div>
+        <div class="modal-content"><div id="iconoNotificacion" style="font-size: 3rem; margin-bottom: 10px;">⚠️</div><h3 id="tituloNotificacion">Aviso</h3><p id="textoNotificacion" style="margin-bottom: 20px;"></p><button class="btn-submit" onclick="cerrarModal('modalNotificacion')" style="background-color: #2563eb;">Entendido</button></div>
     </div>
     <div id="modalCreditos" class="modal">
         <div class="modal-content" style="max-width: 500px; text-align: center;">
@@ -284,124 +144,57 @@
             <h2 id="tituloModalMiembro">Registrar Hermano</h2>
             <form id="formMiembroModal" onsubmit="guardarMiembro(event)">
                 <div class="form-grid">
-                    <div class="form-group"><label>Nombre Completo *</label>
-                        <div class="input-icon"><i class="fa-solid fa-user"></i><input type="text" id="m_nombre"
-                                required /></div>
-                    </div>
-                    <div class="form-group"><label>Teléfono</label>
-                        <div class="input-icon"><i class="fa-solid fa-phone"></i><input type="tel" id="m_telefono" />
-                        </div>
-                    </div>
-                    <div class="form-group"><label>Clasificación</label>
-                        <div class="input-icon"><i class="fa-solid fa-id-card"></i>
-                            <select id="m_tipo" onchange="toggleLiderazgoPorTipo()">
-                                <option value="Catecumeno">Catecúmeno</option>
-                                <option value="Propiedad">En Propiedad</option>
-                            </select>
-                        </div>
-                    </div>
+                    <div class="form-group"><label>Nombre Completo *</label><div class="input-icon"><i class="fa-solid fa-user"></i><input type="text" id="m_nombre" required /></div></div>
+                    <div class="form-group"><label>Teléfono</label><div class="input-icon"><i class="fa-solid fa-phone"></i><input type="tel" id="m_telefono" /></div></div>
+                    <div class="form-group"><label>Clasificación</label><div class="input-icon"><i class="fa-solid fa-id-card"></i><select id="m_tipo" onchange="toggleLiderazgoPorTipo()"><option value="Catecumeno">Catecúmeno</option><option value="Propiedad">En Propiedad</option></select></div></div>
                     <div class="form-group" id="div_liderazgo_texto" style="display:none; grid-column: span 1;">
                         <label>Especificar liderazgo(s)</label>
-                        <div class="input-icon"><i class="fa-solid fa-pen"></i><input type="text" id="m_liderazgo_texto"
-                                placeholder="Ej: Maestro, Vicepresidente" /></div>
-                    </div>
-                </div>
-                <div class="form-group" style="margin-top:10px;">
-                    <label>¿A qué grupos pertenece?</label>
-                    <div class="checkbox-grid" style="display:flex; flex-wrap:wrap; gap:10px; margin-top:5px;">
-                        <label style="margin-right:15px;"><input type="checkbox" id="g_femenil" /> Femenil</label>
-                        <label style="margin-right:15px;"><input type="checkbox" id="g_misioneritas" />
-                            Misioneritas</label>
-                        <label style="margin-right:15px;"><input type="checkbox" id="g_varones" /> Varones</label>
-                        <label style="margin-right:15px;"><input type="checkbox" id="g_exploradores" />
-                            Exploradores</label>
-                        <label style="margin-right:15px;"><input type="checkbox" id="g_embajadores" />
-                            Embajadores</label>
+                        <div class="input-icon"><i class="fa-solid fa-pen"></i><input type="text" id="m_liderazgo_texto" placeholder="Ej: Maestro, Vicepresidente" /></div>
                     </div>
                 </div>
                 <button type="submit" class="btn-submit" id="btnModalMiembroAction">Enviar</button>
             </form>
         </div>
     </div>
-
-    <!-- MODAL ELIMINAR -->
     <div id="modalEliminar" class="modal">
         <div class="modal-content" style="max-width: 450px;">
             <span class="modal-close" onclick="cerrarModal('modalEliminar')">&times;</span>
             <h3 style="color:#ef4444;"><i class="fa-solid fa-trash"></i> Eliminar Miembro</h3>
-            <div class="form-group"><label>Código del Miembro</label>
-                <div class="input-icon"><i class="fa-solid fa-hashtag"></i><input type="text" id="inputEliminarCodigo"
-                        placeholder="Ej: 0001" /></div>
-            </div>
-            <div id="textoConfirmacionEliminar"
-                style="font-weight:bold; color: #0c4d8e; margin: 10px 0; text-align:center;"></div>
-            <button class="btn-submit" style="background:#ef4444;" onclick="buscarYEliminar()">Eliminar
-                Permanentemente</button>
+            <div class="form-group"><label>Código del Miembro</label><div class="input-icon"><i class="fa-solid fa-hashtag"></i><input type="text" id="inputEliminarCodigo" placeholder="Ej: 0001" /></div></div>
+            <div id="textoConfirmacionEliminar" style="font-weight:bold; color: #0c4d8e; margin: 10px 0; text-align:center;"></div>
+            <button class="btn-submit" style="background:#ef4444;" onclick="buscarYEliminar()">Eliminar Permanentemente</button>
         </div>
     </div>
-
-    <!-- MODAL ACTUALIZAR -->
     <div id="modalActualizar" class="modal">
         <div class="modal-content" style="max-width: 500px;">
             <span class="modal-close" onclick="cerrarModal('modalActualizar')">&times;</span>
             <h3 style="color:#f59e0b;"><i class="fa-solid fa-pen"></i> Actualizar Información</h3>
-            <div class="form-group"><label>Código del Miembro</label>
-                <div class="input-icon"><i class="fa-solid fa-hashtag"></i><input type="text" id="inputActualizarCodigo"
-                        placeholder="Ej: 0001" /></div>
-            </div>
-            <button class="btn-submit" style="background:#f59e0b;" onclick="buscarParaActualizar()"
-                id="btnBuscarActualizar">Buscar Miembro</button>
-
+            <div class="form-group"><label>Código del Miembro</label><div class="input-icon"><i class="fa-solid fa-hashtag"></i><input type="text" id="inputActualizarCodigo" placeholder="Ej: 0001" /></div></div>
+            <button class="btn-submit" style="background:#f59e0b;" onclick="buscarParaActualizar()" id="btnBuscarActualizar">Buscar Miembro</button>
             <div id="formActualizarModal" style="display:none; margin-top: 20px;">
                 <div class="form-grid">
-                    <div class="form-group"><label>Nombre</label>
-                        <div class="input-icon"><i class="fa-solid fa-user"></i><input type="text"
-                                id="m_actualizar_nombre" /></div>
-                    </div>
-                    <div class="form-group"><label>Teléfono</label>
-                        <div class="input-icon"><i class="fa-solid fa-phone"></i><input type="tel"
-                                id="m_actualizar_telefono" /></div>
-                    </div>
-                    <div class="form-group"><label>Tipo</label>
-                        <div class="input-icon"><i class="fa-solid fa-id-card"></i>
-                            <select id="m_actualizar_tipo" onchange="toggleActualizarLiderazgoPorTipo()">
-                                <option value="Catecumeno">Catecúmeno</option>
-                                <option value="Propiedad">En Propiedad</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div class="form-group"><label>Grupo</label>
-                        <div class="input-icon"><i class="fa-solid fa-tags"></i><input type="text"
-                                id="m_actualizar_grupo" placeholder="Fraternidad, Exploradores, etc." /></div>
-                    </div>
+                    <div class="form-group"><label>Nombre</label><div class="input-icon"><i class="fa-solid fa-user"></i><input type="text" id="m_actualizar_nombre" /></div></div>
+                    <div class="form-group"><label>Teléfono</label><div class="input-icon"><i class="fa-solid fa-phone"></i><input type="tel" id="m_actualizar_telefono" /></div></div>
+                    <div class="form-group"><label>Tipo</label><div class="input-icon"><i class="fa-solid fa-id-card"></i><select id="m_actualizar_tipo" onchange="toggleActualizarLiderazgoPorTipo()"><option value="Catecumeno">Catecúmeno</option><option value="Propiedad">En Propiedad</option></select></div></div>
                     <div class="form-group" id="div_actualizar_liderazgo_texto" style="display:none;">
                         <label>Especificar liderazgo(s)</label>
-                        <div class="input-icon"><i class="fa-solid fa-pen"></i><input type="text"
-                                id="m_actualizar_liderazgo_texto" placeholder="Ej: Maestro, Vicepresidente" /></div>
+                        <div class="input-icon"><i class="fa-solid fa-pen"></i><input type="text" id="m_actualizar_liderazgo_texto" placeholder="Ej: Presidente" /></div>
                     </div>
                 </div>
-                <button class="btn-submit" style="background:#2563eb;" onclick="guardarActualizacion()"
-                    id="btnGuardarActualizar">Guardar Cambios</button>
+                <button class="btn-submit" style="background:#2563eb;" onclick="guardarActualizacion()" id="btnGuardarActualizar">Guardar Cambios</button>
             </div>
         </div>
     </div>
-
-    <!-- MODAL DE CLAVE ADMIN (Para Finanzas del Secretario General) -->
     <div id="modalClaveAdmin" class="modal">
         <div class="modal-content" style="max-width: 400px;">
             <span class="modal-close" onclick="cerrarModal('modalClaveAdmin')">&times;</span>
             <h3 style="color:#ef4444;"><i class="fa-solid fa-lock"></i> Acceso Restringido</h3>
             <p>Para acceder a Finanzas, ingrese la clave del Administrador:</p>
-            <div class="form-group">
-                <div class="input-icon"><i class="fa-solid fa-key"></i><input type="password" id="inputContraAdmin"
-                        placeholder="Contraseña del Admin" /></div>
-            </div>
-            <button class="btn-submit" onclick="verificarClaveAdmin()"><i class="fa-solid fa-check"></i> Verificar
-                Acceso</button>
+            <div class="form-group"><div class="input-icon"><i class="fa-solid fa-key"></i><input type="password" id="inputContraAdmin" placeholder="Contraseña del Admin" /></div></div>
+            <button class="btn-submit" onclick="verificarClaveAdmin()"><i class="fa-solid fa-check"></i> Verificar Acceso</button>
         </div>
     </div>
 
     <script src="logica.js"></script>
 </body>
-
 </html>

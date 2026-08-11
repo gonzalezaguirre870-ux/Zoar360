@@ -5,8 +5,12 @@ import datetime
 import os
 
 app = Flask(__name__)
-CORS(app)
+
+# Configuración CORS y Sesión (CRUCIAL para evitar cierre de sesión al guardar)
+CORS(app, supports_credentials=True)
 app.secret_key = 'clave_super_secreta_para_sesiones'
+app.config['SESSION_COOKIE_SAMESITE'] = 'None'
+app.config['SESSION_COOKIE_SECURE'] = True
 
 DB_PATH = os.path.join(os.path.dirname(__file__), '..', 'database', 'iglesia.db')
 
@@ -15,6 +19,7 @@ def get_db():
     conn.row_factory = sqlite3.Row
     return conn
 
+# ==================== LOGIN ====================
 @app.route('/api/login', methods=['POST'])
 def login():
     data = request.json
@@ -24,6 +29,7 @@ def login():
         return jsonify({"message": "Login exitoso", "rol": user['rol'], "email": user['email']}), 200
     return jsonify({"error": "Credenciales incorrectas"}), 401
 
+# ==================== MIEMBROS (Sesión estable) ====================
 @app.route('/api/miembros', methods=['GET'])
 def obtener_miembros():
     conn = get_db()
@@ -42,12 +48,16 @@ def obtener_miembro_por_codigo(codigo):
 @app.route('/api/miembros', methods=['POST'])
 def crear_miembro():
     if session.get('user_rol') not in ['Administrador', 'Pastor']:
-        return jsonify({"error": "Solo Pastor o Admin registran."}), 403
+        return jsonify({"error": "Acción denegada."}), 403
     data = request.json
     conn = get_db()
     ultimo = conn.execute("SELECT MAX(codigo) as max FROM miembros").fetchone()
     nuevo_codigo = f"{(int(ultimo['max']) + 1) if ultimo and ultimo['max'] else 1:04d}"
-    nombre_final = data['nombre'] + (f" ({data['liderazgo']})" if data.get('liderazgo') else "")
+    
+    # Lógica: Solo guardar liderazgo si es Propiedad
+    liderazgo = data.get('liderazgo') if data['tipo'] == 'Propiedad' else None
+    nombre_final = data['nombre'] + (f" ({liderazgo})" if liderazgo else "")
+    
     conn.execute("INSERT INTO miembros (codigo, nombre, telefono, tipo, grupo) VALUES (?, ?, ?, ?, ?)", (nuevo_codigo, nombre_final, data.get('telefono'), data['tipo'], data.get('grupo', 'General')))
     conn.commit()
     conn.close()
@@ -68,28 +78,34 @@ def eliminar_miembro(codigo):
             conn.execute("UPDATE miembros SET codigo = ? WHERE id = ?", (nuevo_cod, row['id']))
     conn.commit()
     conn.close()
-    return jsonify({"message": "Miembro eliminado y códigos reordenados"}), 200
+    return jsonify({"message": "Miembro eliminado"}), 200
 
 @app.route('/api/miembros/<codigo>', methods=['PUT'])
 def actualizar_miembro(codigo):
     if session.get('user_rol') not in ['Administrador', 'Pastor']: return jsonify({"error": "Acceso denegado."}), 403
     data = request.json
     conn = get_db()
-    nombre_final = data['nombre'] + (f" ({data['liderazgo']})" if data.get('liderazgo') else "")
+    
+    # Lógica: Limpiar liderazgo si es Catecúmeno
+    liderazgo = data.get('liderazgo') if data['tipo'] == 'Propiedad' else None
+    nombre_final = data['nombre'] + (f" ({liderazgo})" if liderazgo else "")
+    
     conn.execute("UPDATE miembros SET nombre = ?, telefono = ?, tipo = ?, grupo = ? WHERE codigo = ?", (nombre_final, data.get('telefono'), data['tipo'], data.get('grupo', 'General'), codigo))
     conn.commit()
     conn.close()
     return jsonify({"message": "Información actualizada"}), 200
 
+# ==================== SOLICITUDES (Grupos) ====================
 @app.route('/api/solicitudes', methods=['POST'])
 def crear_solicitud():
     data = request.json
     conn = get_db()
-    nombre_final = data['nombre'] + (f" ({data['liderazgo']})" if data.get('liderazgo') else "")
+    liderazgo = data.get('liderazgo') if data['tipo'] == 'Propiedad' else None
+    nombre_final = data['nombre'] + (f" ({liderazgo})" if liderazgo else "")
     conn.execute("INSERT INTO solicitudes (nombre, telefono, tipo, grupo, solicitante_email, estado) VALUES (?, ?, ?, ?, ?, ?)", (nombre_final, data.get('telefono'), data['tipo'], data.get('grupo'), session.get('user_rol'), 'Pendiente'))
-    conn.commit()
-    # AUDITORÍA: Registro de solicitud
-    conn.execute("INSERT INTO notificaciones_sistema (usuario_correo, accion) VALUES (?, ?)", (session.get('user_rol'), f"Envío una solicitud para registrar a {data['nombre']}"))
+    
+    # Auditoría
+    conn.execute("INSERT INTO notificaciones_sistema (usuario_correo, accion, detalles) VALUES (?, ?, ?)", (session.get('user_rol'), f"Solicitud de {data['nombre']}", f"Tipo: {data['tipo']}, Grupo: {data['grupo']}"))
     conn.commit()
     conn.close()
     return jsonify({"message": "Solicitud enviada"}), 201
@@ -117,10 +133,10 @@ def procesar_solicitud(id):
     conn.close()
     return jsonify({"message": "Solicitud procesada"}), 200
 
+# ==================== ASISTENCIA ====================
 @app.route('/api/asistencia/grupo/<grupo>', methods=['GET'])
 def obtener_asistencia_grupo(grupo):
     conn = get_db()
-    # FILTRO SQL ESTRICTO
     miembros = conn.execute("SELECT * FROM miembros WHERE grupo LIKE ?", (f'%{grupo}%',)).fetchall()
     resultado = []
     for m in miembros:
@@ -135,27 +151,39 @@ def obtener_asistencia_grupo(grupo):
 def marcar_asistencia():
     if 'user_id' not in session: return jsonify({"error": "No autorizado"}), 401
     data = request.json
-    miembro_codigo = data.get('codigo')
     ahora = datetime.datetime.now()
     conn = get_db()
-    miembro = conn.execute("SELECT * FROM miembros WHERE codigo = ?", (miembro_codigo,)).fetchone()
+    miembro = conn.execute("SELECT * FROM miembros WHERE codigo = ?", (data['codigo'],)).fetchone()
     if not miembro: return jsonify({"error": "Miembro no encontrado"}), 404
     
-    # Lógica de horario (simplificada para este bloque)
+    dia_semana = ahora.weekday()
+    error = None
+    hora_local = (ahora.hour - 6) if (ahora.hour - 6) >= 0 else (ahora.hour + 18)
+    min_local = ahora.minute
+
+    if dia_semana == 6: # Domingo
+        if not ((hora_local == 14 and min_local >= 45) or (hora_local == 15) or (hora_local == 16 and min_local == 0)):
+            error = "⛔ Domingos solo de 2:45 PM a 4:00 PM."
+    elif dia_semana in [1, 2, 3, 4, 5]:
+        if not ((hora_local == 17 and min_local >= 45) or (hora_local == 18) or (hora_local == 19 and min_local == 0)):
+            error = "⛔ Martes a Sábado solo de 5:45 PM a 7:00 PM."
+
+    if error:
+        conn.close()
+        return jsonify({"error": error}), 403
+
     conn.execute("INSERT INTO asistencias (miembro_id, fecha, hora) VALUES (?, ?, ?)", (miembro['id'], ahora.strftime('%Y-%m-%d'), ahora.strftime('%H:%M:%S')))
-    conn.commit()
-    
-    # === REPARACIÓN DEL CONTEO EN CERO ===
     conn.execute("UPDATE miembros SET total_asistencias = total_asistencias + 1 WHERE id = ?", (miembro['id'],))
     conn.commit()
     
-    # AUDITORÍA: Registro de asistencia
-    conn.execute("INSERT INTO notificaciones_sistema (usuario_correo, accion) VALUES (?, ?)", (session.get('user_rol'), f"El grupo {session.get('user_rol')} envió la asistencia a las {ahora.strftime('%H:%M')}"))
+    # Auditoría expandida
+    conn.execute("INSERT INTO notificaciones_sistema (usuario_correo, accion, detalles) VALUES (?, ?, ?)", 
+                 (session.get('user_rol'), f"Asistencia {miembro['nombre']}", f"Hora: {ahora.strftime('%H:%M')}, Código: {miembro['codigo']}"))
     conn.commit()
     conn.close()
+    return jsonify({"message": "Asistencia guardada"}), 200
 
-    return jsonify({"message": "Asistencia guardada exitosamente"}), 200
-
+# ==================== SANTA CENA ====================
 @app.route('/api/santacena', methods=['POST'])
 def registrar_santa_cena():
     data = request.json
@@ -165,6 +193,7 @@ def registrar_santa_cena():
     conn.close()
     return jsonify({"message": "Registro guardado"}), 200
 
+# ==================== AUDITORÍA ====================
 @app.route('/api/auditoria', methods=['GET'])
 def obtener_auditoria():
     if session.get('user_rol') not in ['Administrador', 'Pastor']: return jsonify([])
@@ -172,6 +201,14 @@ def obtener_auditoria():
     notis = conn.execute("SELECT * FROM notificaciones_sistema ORDER BY fecha_hora DESC LIMIT 30").fetchall()
     conn.close()
     return jsonify([dict(n) for n in notis])
+
+# ==================== VERIFICACIÓN DE CLAVE ADMIN (Modal Finanzas) ====================
+@app.route('/api/verificar-admin', methods=['POST'])
+def verificar_admin():
+    data = request.json
+    user = get_db().execute("SELECT * FROM usuarios WHERE rol='Administrador' AND password_hash=?", (data['password'],)).fetchone()
+    if user: return jsonify({"message": "Acceso concedido"}), 200
+    return jsonify({"error": "Clave incorrecta"}), 401
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)

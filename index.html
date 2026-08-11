@@ -11,7 +11,7 @@
 </head>
 
 <body>
-    <!-- SPLASH Y LOGIN (Mantenido igual) -->
+    <!-- SPLASH Y LOGIN -->
     <div id="pantallaBienvenida" class="welcome-splash">
         <div class="welcome-content"><img src="logoad.png" alt="Logo" class="welcome-logo" />
             <h1 class="welcome-text-1">Bienvenido</h1>
@@ -22,15 +22,22 @@
     <div id="pantallaLogin" class="login-container">
         <div class="login-card"><img src="logoad.png" alt="Logo" class="login-logo" />
             <h2>Iglesia Zoar</h2>
-            <div class="login-description"><i class="fa-solid fa-lock"></i> Control de Acceso Administrativo</div>
+            <!--candado control de acceso administrativo-->
+            <div class="form-group"
+                style="text-align:left; margin-bottom:20px; display:flex; align-items:center; gap:10px;">
+                <i class="fa-solid fa-lock" style="font-size: 1rem; color: #000000; flex:0 0 auto;"></i>
+                <span style="margin-top:5px; font-weight:bold;">Control de Acceso Administrativo</span>
+            </div>
+            <label for="l_email" style="display:block; margin-bottom:5px; font-weight:bold; text-align:left;">Correo
+                Electrónico</label>
             <form id="formLogin" onsubmit="iniciarSesion(event)">
                 <div class="form-group">
-                    <label for="l_email">Correo Electrónico</label>
                     <div class="input-icon"><i class="fa-solid fa-envelope"></i><input type="email" id="l_email"
                             placeholder="correo@zoar.com" required /></div>
                 </div>
+                <label for="l_pass"
+                    style="display:block; margin-bottom:5px; font-weight:bold; text-align:left;">Contraseña</label>
                 <div class="form-group">
-                    <label for="l_pass">Contraseña</label>
                     <div class="input-icon"><i class="fa-solid fa-key"></i><input type="password" id="l_pass"
                             placeholder="••••••••" required /></div>
                 </div>
@@ -53,13 +60,16 @@
             </div>
             <div class="header-actions">
                 <button onclick="cambiarTema()" class="btn-tema" id="btnTema"><i class="fa-solid fa-moon"></i></button>
-                <div class="header-user" onclick="toggleDropdown()">
+
+                <!-- ID AÑADIDO: headerUser -->
+                <div class="header-user" id="headerUser" onclick="toggleDropdown()">
                     <div class="header-avatar"><i class="fa-solid fa-user"></i></div>
                     <span id="nombreUsuarioHeader">Usuario</span>
                     <i class="fa-solid fa-chevron-down"></i>
                     <div class="dropdown-menu" id="dropdownMenu">
                         <span class="d-label">Correo:</span><span class="d-value" id="correoUsuarioDropdown">---</span>
-                        <span class="d-label">Ministerio:</span><span class="d-value" id="rolUsuarioDropdown">---</span>
+                        <span class="d-label">Rol / Ministerio:</span><span class="d-value"
+                            id="rolUsuarioDropdown">---</span>
                         <div
                             style="margin-top: 10px; border-top: 1px solid #e2e8f0; padding-top: 10px; text-align: center;">
                             <button class="btn-cerrar-dropdown" onclick="cerrarSesion()">Cerrar Sesión</button>
@@ -85,16 +95,14 @@
                         class="fa-solid fa-calendar-days"></i><span>Eventos</span></button>
                 <button class="tab-btn" data-tab="privilegios" id="btnPrivilegios"><i
                         class="fa-solid fa-star"></i><span>Privilegios</span></button>
-
-                <!-- NUEVO: BOTÓN DE AUDITORÍA -->
                 <button class="tab-btn" data-tab="auditoria" id="btnAuditoria"><i
-                        class="fa-solid fa-list-check"></i><span>Historial Actividad</span></button>
-
+                        class="fa-solid fa-list-check"></i><span>Historial</span></button>
                 <button class="btn-about" onclick="abrirModal('modalCreditos')"><i class="fa-solid fa-info-circle"></i>
                     Acerca del Sistema</button>
             </nav>
 
             <main class="contenido">
+                <!-- MEMBRESÍA -->
                 <section id="membresia" class="tab-content active">
                     <div class="card">
                         <div
@@ -129,6 +137,7 @@
                     </div>
                 </section>
 
+                <!-- ASISTENCIA -->
                 <section id="asistencia" class="tab-content">
                     <div class="card">
                         <h2><i class="fa-solid fa-clipboard-check icono-titulo"></i> Control de Asistencia</h2>
@@ -163,6 +172,7 @@
                     </div>
                 </section>
 
+                <!-- SANTA CENA -->
                 <section id="santacena" class="tab-content">
                     <div class="card">
                         <h2><i class="fa-solid fa-wine-glass icono-titulo"></i> Santa Cena</h2>
@@ -188,6 +198,7 @@
                     </div>
                 </section>
 
+                <!-- SOLICITUDES -->
                 <section id="solicitudes" class="tab-content">
                     <div class="card">
                         <h2>Solicitudes Pendientes</h2>
@@ -206,28 +217,27 @@
                     </div>
                 </section>
 
+                <!-- FINANZAS -->
                 <section id="finanzas" class="tab-content">
                     <div class="card">
                         <h2>Finanzas</h2>
                         <p>Módulo en desarrollo.</p>
                     </div>
                 </section>
-
                 <section id="eventos" class="tab-content">
                     <div class="card">
                         <h2>Eventos</h2>
-                        <p>Módulo En Desarrollo (Próximamente Versión 2.0).</p>
+                        <p>Módulo En Desarrollo (Versión 2.0).</p>
                     </div>
                 </section>
-
                 <section id="privilegios" class="tab-content">
                     <div class="card">
                         <h2>Privilegios</h2>
-                        <p>Módulo En Desarrollo (Próximamente Versión 2.0).</p>
+                        <p>Módulo En Desarrollo (Versión 2.0).</p>
                     </div>
                 </section>
 
-                <!-- NUEVA SECCIÓN: AUDITORÍA -->
+                <!-- AUDITORÍA -->
                 <section id="auditoria" class="tab-content">
                     <div class="card">
                         <h2><i class="fa-solid fa-list-check icono-titulo"></i> Historial de Actividad</h2>
@@ -237,7 +247,7 @@
                                     <tr>
                                         <th>Fecha / Hora</th>
                                         <th>Usuario / Grupo</th>
-                                        <th>Acción Realizada</th>
+                                        <th>Detalles</th>
                                     </tr>
                                 </thead>
                                 <tbody id="tablaAuditoria"></tbody>
@@ -249,7 +259,7 @@
         </div>
     </div>
 
-    <!-- MODALES (Notificación, Créditos, Miembro, Eliminar, Actualizar) -->
+    <!-- MODALES -->
     <div id="modalNotificacion" class="modal">
         <div class="modal-content">
             <div id="iconoNotificacion" style="font-size: 3rem; margin-bottom: 10px;">⚠️</div>
@@ -283,41 +293,38 @@
                         </div>
                     </div>
                     <div class="form-group"><label>Clasificación</label>
-                        <div class="input-icon"><i class="fa-solid fa-id-card"></i><select id="m_tipo">
+                        <div class="input-icon"><i class="fa-solid fa-id-card"></i>
+                            <select id="m_tipo" onchange="toggleLiderazgoPorTipo()">
                                 <option value="Catecumeno">Catecúmeno</option>
                                 <option value="Propiedad">En Propiedad</option>
-                            </select></div>
-                    </div>
-                    <div class="form-group"><label>¿Posee algún liderazgo?</label>
-                        <div class="input-icon"><i class="fa-solid fa-briefcase"></i><select id="m_liderazgo_si"
-                                onchange="toggleLiderazgo()">
-                                <option value="No">No</option>
-                                <option value="Si">Sí</option>
-                            </select></div>
+                            </select>
+                        </div>
                     </div>
                     <div class="form-group" id="div_liderazgo_texto" style="display:none; grid-column: span 1;">
                         <label>Especificar liderazgo(s)</label>
                         <div class="input-icon"><i class="fa-solid fa-pen"></i><input type="text" id="m_liderazgo_texto"
-                                placeholder="Ej: Presidente" /></div>
+                                placeholder="Ej: Maestro, Vicepresidente" /></div>
                     </div>
                 </div>
                 <div class="form-group" style="margin-top:10px;">
                     <label>¿A qué grupos pertenece?</label>
                     <div class="checkbox-grid" style="display:flex; flex-wrap:wrap; gap:10px; margin-top:5px;">
-                        <label style="margin-right:15px;"><input type="checkbox" id="g_femenil" /> Concilio Misionero Femenil</label>
+                        <label style="margin-right:15px;"><input type="checkbox" id="g_femenil" /> Femenil</label>
                         <label style="margin-right:15px;"><input type="checkbox" id="g_misioneritas" />
                             Misioneritas</label>
-                        <label style="margin-right:15px;"><input type="checkbox" id="g_varones" /> Fraternidad de Varones</label>
+                        <label style="margin-right:15px;"><input type="checkbox" id="g_varones" /> Varones</label>
                         <label style="margin-right:15px;"><input type="checkbox" id="g_exploradores" />
-                            Exploradores del Rey</label>
+                            Exploradores</label>
                         <label style="margin-right:15px;"><input type="checkbox" id="g_embajadores" />
-                            Embajadores de Cristo</label>
+                            Embajadores</label>
                     </div>
                 </div>
                 <button type="submit" class="btn-submit" id="btnModalMiembroAction">Enviar</button>
             </form>
         </div>
     </div>
+
+    <!-- MODAL ELIMINAR -->
     <div id="modalEliminar" class="modal">
         <div class="modal-content" style="max-width: 450px;">
             <span class="modal-close" onclick="cerrarModal('modalEliminar')">&times;</span>
@@ -332,6 +339,8 @@
                 Permanentemente</button>
         </div>
     </div>
+
+    <!-- MODAL ACTUALIZAR -->
     <div id="modalActualizar" class="modal">
         <div class="modal-content" style="max-width: 500px;">
             <span class="modal-close" onclick="cerrarModal('modalActualizar')">&times;</span>
@@ -354,24 +363,18 @@
                                 id="m_actualizar_telefono" /></div>
                     </div>
                     <div class="form-group"><label>Tipo</label>
-                        <div class="input-icon"><i class="fa-solid fa-id-card"></i><select id="m_actualizar_tipo">
+                        <div class="input-icon"><i class="fa-solid fa-id-card"></i>
+                            <select id="m_actualizar_tipo" onchange="toggleActualizarLiderazgoPorTipo()">
                                 <option value="Catecumeno">Catecúmeno</option>
                                 <option value="Propiedad">En Propiedad</option>
-                            </select></div>
+                            </select>
+                        </div>
                     </div>
                     <div class="form-group"><label>Grupo</label>
                         <div class="input-icon"><i class="fa-solid fa-tags"></i><input type="text"
                                 id="m_actualizar_grupo" placeholder="Fraternidad, Exploradores, etc." /></div>
                     </div>
-                    <div class="form-group"><label>¿Posee liderazgo?</label>
-                        <div class="input-icon"><i class="fa-solid fa-briefcase"></i><select
-                                id="m_actualizar_liderazgo_si" onchange="toggleActualizarLiderazgo()">
-                                <option value="No">No</option>
-                                <option value="Si">Sí</option>
-                            </select></div>
-                    </div>
-                    <div class="form-group" id="div_actualizar_liderazgo_texto"
-                        style="display:none; grid-column: span 1;">
+                    <div class="form-group" id="div_actualizar_liderazgo_texto" style="display:none;">
                         <label>Especificar liderazgo(s)</label>
                         <div class="input-icon"><i class="fa-solid fa-pen"></i><input type="text"
                                 id="m_actualizar_liderazgo_texto" placeholder="Ej: Maestro, Vicepresidente" /></div>
@@ -380,6 +383,21 @@
                 <button class="btn-submit" style="background:#2563eb;" onclick="guardarActualizacion()"
                     id="btnGuardarActualizar">Guardar Cambios</button>
             </div>
+        </div>
+    </div>
+
+    <!-- MODAL DE CLAVE ADMIN (Para Finanzas del Secretario General) -->
+    <div id="modalClaveAdmin" class="modal">
+        <div class="modal-content" style="max-width: 400px;">
+            <span class="modal-close" onclick="cerrarModal('modalClaveAdmin')">&times;</span>
+            <h3 style="color:#ef4444;"><i class="fa-solid fa-lock"></i> Acceso Restringido</h3>
+            <p>Para acceder a Finanzas, ingrese la clave del Administrador:</p>
+            <div class="form-group">
+                <div class="input-icon"><i class="fa-solid fa-key"></i><input type="password" id="inputContraAdmin"
+                        placeholder="Contraseña del Admin" /></div>
+            </div>
+            <button class="btn-submit" onclick="verificarClaveAdmin()"><i class="fa-solid fa-check"></i> Verificar
+                Acceso</button>
         </div>
     </div>
 

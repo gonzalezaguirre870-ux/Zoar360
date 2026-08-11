@@ -29,9 +29,7 @@ body {
     color: var(--texto-oscuro);
 }
 
-/* ============================================================
-   SPLASH
-   ============================================================ */
+/* SPLASH */
 .welcome-splash {
     position: fixed;
     inset: 0;
@@ -87,9 +85,7 @@ body {
     }
 }
 
-/* ============================================================
-   LOGIN
-   ============================================================ */
+/* LOGIN */
 .login-container {
     min-height: 100vh;
     display: flex;
@@ -121,9 +117,7 @@ body {
     color: var(--azul-medio);
 }
 
-/* ============================================================
-   HEADER (Degradado Exacto)
-   ============================================================ */
+/* HEADER */
 .app-header {
     display: flex;
     align-items: center;
@@ -192,26 +186,29 @@ body {
     justify-content: center;
 }
 
-/* ============================================================
-   DROPDOWN
-   ============================================================ */
+/* DROPDOWN ACTIVO */
 .header-user {
+    position: relative;
+    cursor: pointer;
     display: flex;
     align-items: center;
     gap: 8px;
     font-size: 0.85rem;
     flex-shrink: 0;
-    cursor: pointer;
-    position: relative;
     padding: 4px 10px;
     border-radius: 30px;
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.header-user:hover {
+    background: rgba(255, 255, 255, 0.2);
 }
 
 .header-avatar {
     width: 32px;
     height: 32px;
     border-radius: 50%;
-    background: rgba(255, 255, 255, 0.18);
+    background: rgba(255, 255, 255, 0.2);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -220,35 +217,44 @@ body {
 .dropdown-menu {
     display: none;
     position: absolute;
-    top: 100%;
+    top: 110%;
     right: 0;
-    margin-top: 8px;
     background: #fff;
-    color: var(--texto-oscuro);
+    color: #1e293b;
     border-radius: var(--radio);
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
     padding: 15px 20px;
-    min-width: 220px;
-    z-index: 30;
+    min-width: 200px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+    z-index: 9999;
     text-align: left;
-    font-size: 0.85rem;
 }
 
 .dropdown-menu .d-label {
     font-weight: 600;
-    color: var(--azul-medio);
     display: block;
     margin-top: 5px;
+    color: #0c4d8e;
 }
 
 .dropdown-menu .d-value {
-    color: var(--texto-gris);
+    color: #64748b;
     display: block;
     margin-bottom: 8px;
 }
 
 .header-user.abierto .dropdown-menu {
     display: block;
+}
+
+.btn-cerrar-dropdown {
+    margin-top: 10px;
+    width: 100%;
+    padding: 8px;
+    background: #ef4444;
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
 }
 
 .btn-menu-movil {
@@ -260,32 +266,7 @@ body {
     cursor: pointer;
 }
 
-@media (max-width: 480px) {
-    .app-header {
-        padding: 8px 10px;
-        min-height: 50px;
-    }
-
-    .header-titles h1 {
-        font-size: 0.85rem;
-    }
-
-    .header-titles p {
-        display: none;
-    }
-
-    .header-user span:not(.header-avatar) {
-        display: none;
-    }
-
-    .btn-menu-movil {
-        display: block;
-    }
-}
-
-/* ============================================================
-   SIDEBAR Y BODY
-   ============================================================ */
+/* SIDEBAR Y BODY */
 .app-body {
     display: flex;
     min-height: calc(100vh - 60px);
@@ -327,7 +308,8 @@ body {
     color: #fff;
 }
 
-.btn-about {
+.btn-about,
+.btn-auditoria {
     margin-top: auto;
     display: flex;
     align-items: center;
@@ -342,47 +324,13 @@ body {
     transition: 0.2s;
 }
 
-.btn-about:hover {
+.btn-about:hover,
+.btn-auditoria:hover {
     background: #16295a;
     color: #fff;
 }
 
-.btn-salir {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    background: #fee2e2;
-    color: #991b1b;
-    border: none;
-    border-radius: 8px;
-    padding: 12px 14px;
-    font-weight: 600;
-    cursor: pointer;
-    width: 100%;
-    margin-top: 5px;
-}
-
-@media (max-width: 860px) {
-    .sidebar {
-        position: fixed;
-        top: 60px;
-        left: 0;
-        bottom: 0;
-        z-index: 30;
-        transform: translateX(-100%);
-        transition: 0.2s;
-        width: 240px;
-        box-shadow: 4px 0 20px rgba(0, 0, 0, 0.25);
-    }
-
-    body.sidebar-abierto .sidebar {
-        transform: translateX(0);
-    }
-}
-
-/* ============================================================
-   CONTENIDO Y CARDS
-   ============================================================ */
+/* CONTENIDO */
 .contenido {
     flex: 1;
     padding: 24px;
@@ -418,24 +366,7 @@ body {
     border: 1px solid var(--borde);
 }
 
-@media (max-width: 860px) {
-    .contenido {
-        padding: 16px;
-    }
-
-    .card {
-        padding: 18px;
-    }
-
-    .modal-content {
-        padding: 20px;
-        margin: 10px;
-    }
-}
-
-/* ============================================================
-   FORMULARIOS Y BOTONES
-   ============================================================ */
+/* FORMULARIOS */
 .form-grid {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
@@ -520,30 +451,7 @@ body {
     cursor: pointer;
 }
 
-@media (min-width: 520px) {
-    .btn-submit {
-        width: auto;
-    }
-}
-
-.checkbox-grid {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
-    margin-top: 5px;
-}
-
-.checkbox-item {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-weight: 400 !important;
-    font-size: 0.88rem;
-}
-
-/* ============================================================
-   TABLAS Y BADGES
-   ============================================================ */
+/* TABLAS */
 .tabla-wrap {
     overflow-x: auto;
     margin-top: 20px;
@@ -586,35 +494,14 @@ tbody td {
     color: #92400e;
 }
 
-.btn-accion {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    padding: 4px 12px;
-    border: none;
-    border-radius: 6px;
-    font-size: 0.8rem;
-    font-weight: 600;
-    cursor: pointer;
-}
-
-.btn-accion.aprobar {
-    background: #dcfce7;
-    color: #065f46;
-}
-
-.btn-accion.aprobar:hover {
-    background: #bbf7d0;
-}
-
 /* ============================================================
-   MODALES
+   CORRECCIÓN DE Z-INDEX Y CAPAS (PARA ALERTAS Y MODALES)
    ============================================================ */
 .modal {
     display: none;
     position: fixed;
     inset: 0;
-    z-index: 50;
+    z-index: 1000;
     background: rgba(0, 0, 0, 0.5);
     align-items: center;
     justify-content: center;
@@ -650,129 +537,37 @@ tbody td {
     color: var(--texto-oscuro);
 }
 
-/* ============================================================
-   ASISTENCIA
-   ============================================================ */
-.asistencia-info {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 16px 24px;
-    background: #f1f5f9;
-    padding: 14px 20px;
-    border-radius: var(--radio);
-    margin-bottom: 20px;
-}
-
-.asistencia-info .dia-actual {
-    font-size: 1rem;
-}
-
-.asistencia-info .grupo-actual {
-    display: inline-block;
-    background: #2563eb;
-    color: #fff;
-    padding: 2px 14px;
-    border-radius: 40px;
-    font-size: 0.8rem;
-    font-weight: 600;
-    margin-left: 8px;
-}
-
-/* ============================================================
-   MODO OSCURO (CORREGIDO PARA TEXTOS)
-   ============================================================ */
-body.modo-oscuro {
-    --fondo: #0f172a;
-    --card-bg: #1e293b;
-    --borde: #334155;
-    --texto-oscuro: #f1f5f9;
-    --texto-gris: #94a3b8;
-}
-
-body.modo-oscuro .input-icon {
-    background: #0f172a;
-}
-
-body.modo-oscuro .input-icon input,
-body.modo-oscuro .input-icon select {
-    color: #f1f5f9;
-}
-
-body.modo-oscuro .form-group label {
-    color: #f1f5f9;
-}
-
-body.modo-oscuro .dropdown-menu {
-    background: #1e293b;
-    color: #f1f5f9;
-    border: 1px solid #334155;
-}
-
-body.modo-oscuro .dropdown-menu .d-value {
-    color: #94a3b8;
-}
-
-body.modo-oscuro .login-card {
-    background: #1e293b;
-    color: #f1f5f9;
-}
-
-body.modo-oscuro .login-card h2 {
-    color: #f1f5f9;
-}
-
-body.modo-oscuro .modal-content {
-    background: #1e293b;
-    color: #f1f5f9;
-}
-
-body.modo-oscuro thead th {
-    background: #334155;
-    color: #f1f5f9;
-}
-
-body.modo-oscuro tbody td {
-    color: #f1f5f9;
-}
-
-body.modo-oscuro .badge-propiedad {
-    background: #1e3a8a;
-    color: #93c5fd;
-}
-
-body.modo-oscuro .asistencia-info {
-    background: #1e293b;
-}
-
-/* ============================================================
-   CORRECCIÓN DE Z-INDEX Y CAPAS (PARA ALERTAS Y MODALES)
-   ============================================================ */
-.modal {
-    /* Aseguramos que los modales tengan prioridad alta */
-    z-index: 1000 !important;
-}
-
 #modalNotificacion {
-    /* ¡La alerta personalizada debe estar por ENCIMA de todo! */
-    z-index: 2000 !important;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
     display: none;
-    /* Por defecto oculta */
+    align-items: center;
+    justify-content: center;
+    z-index: 9999 !important;
+    background: rgba(0, 0, 0, 0.4);
 }
 
+/* Fuerza bruta de Z-Index y posición */
 #modalNotificacion.activo {
     display: flex;
-    /* Se muestra cuando se activa */
+}
+
+#modalNotificacion .modal-content {
+    max-width: 400px;
+    text-align: center;
 }
 
 /* ============================================================
-   MODO OSCURO - CONTRASTE TOTAL DE TEXTOS Y LABELS
+   MODO OSCURO
    ============================================================ */
 body.modo-oscuro {
     --fondo: #0f172a;
     --card-bg: #1e293b;
     --borde: #334155;
     --texto-oscuro: #f1f5f9;
-    /* Cambia TODOS los textos a blanco/gris claro */
     --texto-gris: #94a3b8;
 }
 
@@ -831,55 +626,4 @@ body.modo-oscuro tbody td {
 
 body.modo-oscuro .input-icon input::placeholder {
     color: #94a3b8;
-}
-
-/* ============================================================
-   DROPDOWN DEL PERFIL (FLECHA ACTIVA)
-   ============================================================ */
-.header-user {
-    position: relative;
-    cursor: pointer;
-}
-
-.header-user.abierto .dropdown-menu {
-    display: block;
-}
-
-.dropdown-menu {
-    display: none;
-    position: absolute;
-    top: 110%;
-    right: 0;
-    background: #fff;
-    color: #1e293b;
-    border-radius: 12px;
-    padding: 15px 20px;
-    min-width: 200px;
-    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
-    z-index: 999;
-    text-align: left;
-}
-
-.dropdown-menu .d-label {
-    font-weight: 600;
-    display: block;
-    margin-top: 5px;
-    color: #0c4d8e;
-}
-
-.dropdown-menu .d-value {
-    color: #64748b;
-    display: block;
-    margin-bottom: 8px;
-}
-
-.dropdown-menu .btn-cerrar-dropdown {
-    margin-top: 10px;
-    width: 100%;
-    padding: 8px;
-    background: #ef4444;
-    color: #fff;
-    border: none;
-    border-radius: 6px;
-    cursor: pointer;
 }

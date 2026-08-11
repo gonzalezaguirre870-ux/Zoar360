@@ -6,13 +6,13 @@ const $ = id => document.getElementById(id);
 
 // MAPEO DE ROLES, MINISTERIOS Y GÉNEROS (Estricto)
 const MAPA_ROLES = {
-    'Secretaria_Embajadores_de_Cristo': { ministerio: 'Embajadores de Cristo', rol: 'Secretaria' },
-    'Secretario_Fraternidad_de_Varones': { ministerio: 'Fraternidad de Varones', rol: 'Secretario' },
-    'Secretario_Exploradores_del_Rey': { ministerio: 'Exploradores del Rey', rol: 'Secretario' },
-    'Secretario_Misioneritas': { ministerio: 'Misioneritas', rol: 'Secretaria' },
-    'Secretaria_Concilio_Misionero_Femenil': { ministerio: 'Concilio Misionero Femenil', rol: 'Secretaria' },
-    'Secretario_General': { ministerio: 'Culto General', rol: 'Secretario General' },
-    'Pastor': { ministerio: 'pastor', rol: 'pastor' }, // En minúsculas como pediste
+    'Secretaria Embajadores de Cristo': { ministerio: 'Embajadores de Cristo', rol: 'Secretaria' },
+    'Secretario Fraternidad de Varones': { ministerio: 'Fraternidad de Varones', rol: 'Secretario' },
+    'Secretario Exploradores del Rey': { ministerio: 'Exploradores del Rey', rol: 'Secretario' },
+    'Secretario Misioneritas': { ministerio: 'Misioneritas', rol: 'Secretaria' },
+    'Secretaria Concilio Misionero Femenil': { ministerio: 'Concilio Misionero Femenil', rol: 'Secretaria' },
+    'Secretario General': { ministerio: 'Culto General', rol: 'Secretario General' },
+    'Pastor': { ministerio: 'Pastorado', rol: 'Pastor' },
     'Administrador': { ministerio: 'Administración', rol: 'Administrador' }
 };
 
@@ -201,11 +201,11 @@ async function guardarMiembro(e) {
     if (esLiderazgo && !liderazgoTexto) return mostrarNotificacion('Si es Propiedad, debe especificar el liderazgo.', 'error');
 
     let grupos = [];
-    if ($('g_femenil').checked) grupos.push('Concilio Misionero Femenil');
-    if ($('g_misioneritas').checked) grupos.push('Misioneritas');
-    if ($('g_varones').checked) grupos.push('Fraternidad de Varones');
-    if ($('g_exploradores').checked) grupos.push('Exploradores del Rey');
-    if ($('g_embajadores').checked) grupos.push('Embajadores de Cristo');
+    if ($('g_Concilio Misionero Femenil').checked) grupos.push('Concilio Misionero Femenil');
+    if ($('g_Misioneritas').checked) grupos.push('Misioneritas');
+    if ($('g_Fraternidad de Varones').checked) grupos.push('Fraternidad de Varones');
+    if ($('g_Exploradores del Rey').checked) grupos.push('Exploradores del Rey');
+    if ($('g_Embajadores de Cristo').checked) grupos.push('Embajadores de Cristo');
 
     const datos = { nombre: nombre, telefono: $('m_telefono').value.trim() || null, tipo: tipo, grupo: grupos.join(', ') || 'General', liderazgo: liderazgoTexto };
     const esAdminPastor = (rol === 'Administrador' || rol === 'Pastor');

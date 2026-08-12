@@ -1,10 +1,26 @@
 const API = window.location.hostname === '127.0.0.1' || window.location.hostname === 'localhost' ? 'http://127.0.0.1:5000' : 'https://zoar360.onrender.com';
 let rol = null;
 let esModoOscuro = false;
+let intentosFallidos = 0;
 
 const $ = id => document.getElementById(id);
 
-// MAPEO DE ROLES Y MINISTERIOS (Nombres COMPLETOS y específicos)
+// ==================== NOTIFICACIONES PERSONALIZADAS ====================
+const mostrarNotificacion = (mensaje, tipo = 'error') => {
+    const icono = tipo === 'exito' ? '✅' : tipo === 'info' ? 'ℹ️' : '⚠️';
+    document.getElementById('iconoNotificacion').textContent = icono;
+    document.getElementById('textoNotificacion').textContent = mensaje;
+    document.getElementById('modalNotificacion').classList.add('activo');
+};
+
+// Cerrar notificación con tecla Enter
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && document.getElementById('modalNotificacion').classList.contains('activo')) {
+        document.getElementById('modalNotificacion').classList.remove('activo');
+    }
+});
+
+// ==================== MAPEO DE ROLES ====================
 const MAPA_ROLES = {
     'Secretaria_Embajadores_de_Cristo': { ministerio: 'Embajadores de Cristo', rol: 'Secretaria' },
     'Secretario_Fraternidad_de_Varones': { ministerio: 'Fraternidad de Varones', rol: 'Secretario' },
@@ -16,32 +32,15 @@ const MAPA_ROLES = {
     'Administrador': { ministerio: 'Administración', rol: 'Administrador' }
 };
 
-const mostrarNotificacion = (mensaje, tipo = 'error') => {
-    const icono = tipo === 'exito' ? '✅' : tipo === 'info' ? 'ℹ️' : '⚠️';
-    document.getElementById('iconoNotificacion').textContent = icono;
-    document.getElementById('textoNotificacion').textContent = mensaje;
-    document.getElementById('modalNotificacion').classList.add('activo');
-};
-
-// ==================== MODO OSCURO Y DROPDOWN ====================
-function toggleDropdown() { document.getElementById('headerUser').classList.toggle('abierto'); }
-
-function cambiarTema() {
-    esModoOscuro = !esModoOscuro;
-    document.body.classList.toggle('modo-oscuro', esModoOscuro);
-    document.getElementById('btnTema').innerHTML = esModoOscuro ? '<i class="fa-solid fa-sun"></i>' : '<i class="fa-solid fa-moon"></i>';
-}
-
 // ==================== CIERRE DE MENÚ MÓVIL ====================
 document.addEventListener('click', function(e) {
     const sidebar = document.getElementById('sidebarNav');
     const menuBtn = document.getElementById('btnMenuMovil');
-    const isClickInsideMenu = sidebar?.contains(e.target);
-    const isClickOnMenuBtn = menuBtn?.contains(e.target);
-    if (!isClickInsideMenu && !isClickOnMenuBtn && document.body.classList.contains('sidebar-abierto')) {
+    if (!sidebar.contains(e.target) && !menuBtn.contains(e.target) && document.body.classList.contains('sidebar-abierto')) {
         document.body.classList.remove('sidebar-abierto');
     }
 });
+
 document.querySelectorAll('#sidebarNav .tab-btn, #sidebarNav .btn-about').forEach(btn => {
     btn.addEventListener('click', () => {
         if (window.innerWidth <= 768) document.body.classList.remove('sidebar-abierto');
@@ -54,7 +53,7 @@ document.addEventListener('DOMContentLoaded', () => {
         btn.addEventListener('click', function() {
             const targetId = this.dataset.tab;
             if (targetId === 'eventos' || targetId === 'privilegios') {
-                mostrarNotificacion('Módulo En Desarrollo (Próximamente Versión 2.0)', 'info');
+                mostrarNotificacion('Módulo En Desarrollo (Versión 2.0)', 'info');
                 return;
             }
             if(targetId === 'finanzas' && rol === 'Secretario_General') {
@@ -77,18 +76,43 @@ const cambiarPestaña = id => {
     if(id === 'auditoria') cargarAuditoria();
 };
 
-// ==================== LOGIN, SEGURIDAD Y FECHA ====================
+// ==================== LOGIN CON BLOQUEO ====================
+let temporizadorLogin = null;
+
 async function iniciarSesion(e) {
     e.preventDefault();
+    const emailInp = document.getElementById('l_email');
+    const passInp = document.getElementById('l_pass');
+    
+    if(temporizadorLogin) {
+        mostrarNotificacion('Espera a que termine el bloqueo.', 'error');
+        return;
+    }
+
     try {
         const res = await fetch(`${API}/api/login`, { 
             method:'POST', headers:{'Content-Type':'application/json'}, 
-            body:JSON.stringify({email:$('l_email').value, password:$('l_pass').value}),
+            body:JSON.stringify({email: emailInp.value, password: passInp.value}),
             credentials: 'include'
         });
         const data = await res.json();
-        if(!res.ok) { mostrarNotificacion(data.error, 'error'); document.getElementById('formLogin').reset(); return; }
+
+        if(!res.ok) {
+            if(res.status === 429) {
+                // Bloqueo activo
+                mostrarNotificacion(data.error, 'error');
+                const segundos = parseInt(data.error.match(/\d+/));
+                if(segundos) iniciarTemporizadorLogin(segundos);
+                return;
+            }
+            // Fallo normal
+            mostrarNotificacion('Error: Credenciales Inválidas', 'error');
+            emailInp.value = '';
+            passInp.value = '';
+            return;
+        }
         
+        // Éxito
         rol = data.rol;
         sessionStorage.setItem('zoar360_user', JSON.stringify({rol: data.rol, email: data.email}));
         if (rol === 'Administrador') localStorage.setItem('zoar360_admin', 'true');
@@ -96,18 +120,15 @@ async function iniciarSesion(e) {
         document.getElementById('pantallaLogin').style.display = 'none';
         document.getElementById('appPrincipal').style.display = 'block';
         
-        // Fecha en español (funciona en móviles)
         const fecha = new Date().toLocaleDateString('es-ES', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
         document.getElementById('fechaHeader').textContent = fecha;
 
-        // Mapeo de Dropdown
         const info = MAPA_ROLES[rol] || { ministerio: 'General', rol: rol };
         document.getElementById('nombreUsuarioHeader').textContent = info.rol;
         document.getElementById('rolUsuarioDropdown').textContent = info.rol;
         document.getElementById('ministerioUsuarioDropdown').textContent = info.ministerio;
         document.getElementById('correoUsuarioDropdown').textContent = data.email;
 
-        // Visibilidad de Menús
         const esAdminPastor = (rol === 'Administrador' || rol === 'Pastor');
         const esSecretarioGeneral = (rol === 'Secretario_General');
         const esSecretarioGrupo = rol.startsWith('Secretario_') && rol !== 'Secretario_General';
@@ -121,7 +142,6 @@ async function iniciarSesion(e) {
         document.getElementById('btnSantaCena').style.display = (esAdminPastor || esSecretarioGeneral) ? 'flex' : 'none';
 
         if (esSecretarioGrupo) {
-            // LIMPIEZA TOTAL DE GRUPOS (Membresía y Santa Cena eliminados)
             document.getElementById('btnMembresia').style.display = 'none';
             document.getElementById('btnSantaCena').style.display = 'none';
             document.getElementById('btnEliminarAdmin').style.display = 'none';
@@ -138,10 +158,30 @@ async function iniciarSesion(e) {
             cambiarPestaña('membresia');
         }
         document.body.classList.remove('sidebar-abierto');
-    } catch { mostrarNotificacion('Error de conexión con el servidor.', 'error'); }
+    } catch (e) {
+        mostrarNotificacion('Error de conexión con el servidor.', 'error');
+    }
 }
 
-// Seguridad por desenfoque (Admin excluido)
+function iniciarTemporizadorLogin(segundos) {
+    const btnLogin = document.querySelector('#formLogin .btn-submit');
+    btnLogin.disabled = true;
+    btnLogin.textContent = `Espera ${segundos}s`;
+    
+    let tiempoRestante = segundos;
+    temporizadorLogin = setInterval(() => {
+        tiempoRestante--;
+        btnLogin.textContent = `Espera ${tiempoRestante}s`;
+        if(tiempoRestante <= 0) {
+            clearInterval(temporizadorLogin);
+            temporizadorLogin = null;
+            btnLogin.disabled = false;
+            btnLogin.textContent = 'Iniciar Sesión';
+        }
+    }, 1000);
+}
+
+// ==================== SEGURIDAD Y CIERRE DE SESIÓN ====================
 window.addEventListener('beforeunload', () => {
     if (rol !== 'Administrador') sessionStorage.removeItem('zoar360_user');
 });
@@ -153,55 +193,7 @@ document.addEventListener('visibilitychange', () => {
 });
 function cerrarSesion() { sessionStorage.clear(); if(rol !== 'Administrador') localStorage.clear(); window.location.href = window.location.href; }
 
-// ==================== CLAVE ADMIN ====================
-async function verificarClaveAdmin() {
-    const clave = document.getElementById('inputContraAdmin').value;
-    if(!clave) return mostrarNotificacion('Debes ingresar la clave del Admin.', 'error');
-    const res = await fetch(`${API}/api/verificar-admin`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({password: clave}), credentials: 'include' });
-    if(res.ok) {
-        mostrarNotificacion('Acceso a Finanzas concedido.', 'exito');
-        document.getElementById('modalClaveAdmin').classList.remove('activo');
-        cambiarPestaña('finanzas');
-    } else {
-        mostrarNotificacion('Clave incorrecta. Acceso denegado.', 'error');
-    }
-}
-
-// ==================== AUDITORÍA ====================
-async function cargarAuditoria() {
-    const res = await fetch(`${API}/api/auditoria`, { credentials: 'include' });
-    const lista = await res.json();
-    let html = "";
-    lista.forEach(n => {
-        const fecha = new Date(n.fecha_hora);
-        const fechaStr = fecha.toLocaleDateString('es-ES');
-        const horaStr = fecha.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
-        html += `<tr onclick="mostrarDetalleAuditoria('${n.accion}', '${n.detalles || 'Sin detalles adicionales'}', '${n.usuario_correo}', '${fechaStr} ${horaStr}')" style="cursor:pointer;">
-            <td>${fechaStr} ${horaStr}</td><td>${n.usuario_correo}</td><td>${n.accion}</td>
-        </tr>`;
-    });
-    document.getElementById('tablaAuditoria').innerHTML = html || "<tr><td colspan='3'>No hay actividad registrada.</td></tr>";
-}
-function mostrarDetalleAuditoria(accion, detalles, usuario, fecha) {
-    mostrarNotificacion(`[${fecha}] ${usuario}\n\nAcción: ${accion}\n\nDetalles: ${detalles}`, 'info');
-}
-
-// ==================== MIEMBROS (ESTRUCTURA DE TABLA RESTAURADA) ====================
-async function cargarMiembros() {
-    const res = await fetch(`${API}/api/miembros`, { credentials: 'include' });
-    const lista = await res.json();
-    document.getElementById('tablaMiembros').innerHTML = lista.map(m => 
-        `<tr>
-            <td><strong>${m.codigo}</strong></td>
-            <td>${m.nombre}</td>
-            <td>${m.telefono || '---'}</td>
-            <td><span class="badge badge-propiedad">${m.tipo}</span></td>
-            <td>${m.grupo}</td>
-        </tr>`
-    ).join('');
-}
-
-// ==================== LÓGICA DEL FORMULARIO DINÁMICO (CORREGIDA) ====================
+// ==================== FORMULARIO DINÁMICO (Liderazgo) ====================
 function toggleLiderazgoPorTipo() {
     const tipo = document.getElementById('m_tipo').value;
     const divLiderazgoPregunta = document.getElementById('div_liderazgo_pregunta');
@@ -209,7 +201,6 @@ function toggleLiderazgoPorTipo() {
     
     if (tipo === 'Propiedad') {
         divLiderazgoPregunta.style.display = 'block';
-        // Resetear estado al cambiar a Propiedad
         document.getElementById('m_liderazgo_si').value = 'No';
         divLiderazgoTexto.style.display = 'none';
     } else {
@@ -223,6 +214,7 @@ function toggleLiderazgoSiNo() {
     document.getElementById('div_liderazgo_texto').style.display = val === 'Si' ? 'block' : 'none';
 }
 
+// ==================== GUARDAR MIEMBRO / SOLICITUD (BOTONES REALES) ====================
 async function guardarMiembro(e) {
     e.preventDefault();
     const nombre = document.getElementById('m_nombre').value.trim();
@@ -237,13 +229,20 @@ async function guardarMiembro(e) {
     }
 
     let grupos = [];
-    if($('g_femenil').checked) grupos.push('Concilio Misionero Femenil');
-    if($('g_misioneritas').checked) grupos.push('Misioneritas');
-    if($('g_varones').checked) grupos.push('Fraternidad de Varones');
-    if($('g_exploradores').checked) grupos.push('Exploradores del Rey');
-    if($('g_embajadores').checked) grupos.push('Embajadores de Cristo');
+    if(document.getElementById('g_femenil').checked) grupos.push('Concilio Misionero Femenil');
+    if(document.getElementById('g_misioneritas').checked) grupos.push('Misioneritas');
+    if(document.getElementById('g_varones').checked) grupos.push('Fraternidad de Varones');
+    if(document.getElementById('g_exploradores').checked) grupos.push('Exploradores del Rey');
+    if(document.getElementById('g_embajadores').checked) grupos.push('Embajadores de Cristo');
 
-    const datos = { nombre: nombre, telefono: $('m_telefono').value.trim() || null, tipo: tipo, grupo: grupos.join(', ') || 'General', liderazgo: liderazgoTexto };
+    const datos = {
+        nombre: nombre,
+        telefono: document.getElementById('m_telefono').value.trim() || null,
+        tipo: tipo,
+        grupo: grupos.join(', ') || 'General',
+        liderazgo: liderazgoTexto
+    };
+
     const esAdminPastor = (rol === 'Administrador' || rol === 'Pastor');
     const url = esAdminPastor ? `${API}/api/miembros` : `${API}/api/solicitudes`;
     
@@ -251,67 +250,43 @@ async function guardarMiembro(e) {
     if(res.ok) {
         mostrarNotificacion(esAdminPastor ? 'Miembro registrado con éxito.' : 'Solicitud enviada.', 'exito');
         cerrarModalYLimpiar('modalMiembro');
-        cargarMiembros(); // Actualiza DOM sin cerrar sesión
+        cargarMiembros();
     } else {
         const err = await res.json();
         mostrarNotificacion(err.error || 'Error al guardar.', 'error');
     }
 }
 
-// ==================== SOLICITUDES ====================
+// ==================== CARGAR MIEMBROS (LISTA) ====================
+async function cargarMiembros() {
+    const res = await fetch(`${API}/api/miembros`, { credentials: 'include' });
+    const lista = await res.json();
+    document.getElementById('tablaMiembros').innerHTML = lista.map(m => 
+        `<tr>
+            <td><strong>${m.codigo}</strong></td>
+            <td>${m.nombre}</td>
+            <td>${m.telefono || '---'}</td>
+            <td><span class="badge badge-propiedad">${m.tipo}</span></td>
+            <td>${m.grupo}</td>
+        </tr>`
+    ).join('');
+}
+
+// ==================== CARGAR SOLICITUDES (PASTOR/ADMIN) ====================
 async function cargarSolicitudes() {
     const res = await fetch(`${API}/api/solicitudes`, { credentials: 'include' });
     const lista = await res.json();
     document.getElementById('tablaSolicitudes').innerHTML = lista.map(s => `<tr><td>${s.nombre}</td><td><span class="badge badge-pendiente" style="background:#fef3c7;">${s.estado}</span></td><td><button class="btn-submit" style="width:auto; padding:5px 10px; font-size:0.8rem;" onclick="procesarSolicitud(${s.id}, 'Aprobada')">Aprobar</button></td></tr>`).join('');
 }
+
 async function procesarSolicitud(id, estado) {
     await fetch(`${API}/api/solicitudes/${id}`, { method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify({estado: estado}), credentials: 'include' });
-    mostrarNotificacion('Solicitud procesada.', 'exito'); cargarSolicitudes(); cargarMiembros();
+    mostrarNotificacion('Solicitud procesada.', 'exito');
+    cargarSolicitudes();
+    cargarMiembros();
 }
 
-// ==================== ASISTENCIA Y SANTA CENA ====================
-let intervaloActual = null;
-function iniciarCronometroSantaCena() {
-    if(intervaloActual) clearInterval(intervaloActual);
-    cargarSantaCena();
-    intervaloActual = setInterval(() => {
-        const hoy = new Date();
-        let año = hoy.getFullYear(); let mes = hoy.getMonth();
-        let primerDiaMes = new Date(año, mes, 1);
-        let primerDomingo = 1 + ((7 - primerDiaMes.getDay()) % 7);
-        let fechaSantaCena = new Date(año, mes, primerDomingo);
-        if (hoy > fechaSantaCena) { mes++; if (mes > 11) { mes = 0; año++; } primerDiaMes = new Date(año, mes, 1); primerDomingo = 1 + ((7 - primerDiaMes.getDay()) % 7); fechaSantaCena = new Date(año, mes, primerDomingo); }
-        const diferencia = fechaSantaCena - hoy;
-        if (diferencia <= 0) { document.getElementById('cronometroSantaCena').innerHTML = `<span style="color:#22c55e;">¡Hoy es el día!</span>`; return; }
-        const dias = Math.floor(diferencia / (1000 * 60 * 60 * 24));
-        const horas = Math.floor((diferencia % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-        const minutos = Math.floor((diferencia % (1000 * 60 * 60)) / (1000 * 60));
-        const segundos = Math.floor((diferencia % (1000 * 60)) / 1000);
-        document.getElementById('cronometroSantaCena').textContent = `${dias} días, ${horas} h, ${minutos} m, ${segundos} s`;
-    }, 1000);
-}
-
-async function cargarSantaCena() {
-    const res = await fetch(`${API}/api/miembros`, { credentials: 'include' });
-    const lista = await res.json();
-    const filtrados = lista.filter(m => m.tipo === 'Propiedad');
-    document.getElementById('tablaSantaCena').innerHTML = filtrados.map(m => 
-        `<tr><td><strong>${m.codigo}</strong></td><td>${m.nombre}</td><td><input type="checkbox" class="sc-check" data-id="${m.id}" /></td></tr>`
-    ).join('');
-}
-
-async function guardarSantaCena() {
-    const ahora = new Date();
-    if (ahora.getDay() !== 0) return mostrarNotificacion('La Santa Cena solo se registra los Domingos.', 'error');
-    const fecha = ahora.toISOString().split('T')[0];
-    const checks = document.querySelectorAll('.sc-check:checked');
-    if(!checks.length) return mostrarNotificacion('No hay asistentes seleccionados.', 'error');
-    for (const check of checks) {
-        await fetch(`${API}/api/santacena`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({miembro_id: parseInt(check.dataset.id), fecha: fecha, asistio: true}), credentials: 'include' });
-    }
-    mostrarNotificacion('✅ Registro de Santa Cena guardado.', 'exito');
-}
-
+// ==================== ASISTENCIA (CON FILTRO) ====================
 async function cargarAsistencia() {
     const ahora = new Date();
     const dias = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
@@ -356,18 +331,64 @@ async function guardarAsistencia() {
     cargarAsistencia();
 }
 
-// ==================== MODALES Y ADMIN ====================
+// ==================== SANTA CENA (CRONÓMETRO) ====================
+let intervaloActual = null;
+
+function iniciarCronometroSantaCena() {
+    if(intervaloActual) clearInterval(intervaloActual);
+    cargarSantaCena();
+    intervaloActual = setInterval(() => {
+        const hoy = new Date();
+        let año = hoy.getFullYear(); let mes = hoy.getMonth();
+        let primerDiaMes = new Date(año, mes, 1);
+        let primerDomingo = 1 + ((7 - primerDiaMes.getDay()) % 7);
+        let fechaSantaCena = new Date(año, mes, primerDomingo);
+        if (hoy > fechaSantaCena) { mes++; if (mes > 11) { mes = 0; año++; } primerDiaMes = new Date(año, mes, 1); primerDomingo = 1 + ((7 - primerDiaMes.getDay()) % 7); fechaSantaCena = new Date(año, mes, primerDomingo); }
+        const diferencia = fechaSantaCena - hoy;
+        if (diferencia <= 0) { document.getElementById('cronometroSantaCena').innerHTML = `<span style="color:#22c55e;">¡Hoy es el día!</span>`; return; }
+        const dias = Math.floor(diferencia / (1000 * 60 * 60 * 24));
+        const horas = Math.floor((diferencia % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+        const minutos = Math.floor((diferencia % (1000 * 60 * 60)) / (1000 * 60));
+        const segundos = Math.floor((diferencia % (1000 * 60)) / 1000);
+        document.getElementById('cronometroSantaCena').textContent = `${dias} días, ${horas} h, ${minutos} m, ${segundos} s`;
+    }, 1000);
+}
+
+async function cargarSantaCena() {
+    const res = await fetch(`${API}/api/miembros`, { credentials: 'include' });
+    const lista = await res.json();
+    const filtrados = lista.filter(m => m.tipo === 'Propiedad');
+    document.getElementById('tablaSantaCena').innerHTML = filtrados.map(m => 
+        `<tr><td><strong>${m.codigo}</strong></td><td>${m.nombre}</td><td><input type="checkbox" class="sc-check" data-id="${m.id}" /></td></tr>`
+    ).join('');
+}
+
+async function guardarSantaCena() {
+    const ahora = new Date();
+    if (ahora.getDay() !== 0) return mostrarNotificacion('La Santa Cena solo se registra los Domingos.', 'error');
+    const fecha = ahora.toISOString().split('T')[0];
+    const checks = document.querySelectorAll('.sc-check:checked');
+    if(!checks.length) return mostrarNotificacion('No hay asistentes seleccionados.', 'error');
+    for (const check of checks) {
+        await fetch(`${API}/api/santacena`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({miembro_id: parseInt(check.dataset.id), fecha: fecha, asistio: true}), credentials: 'include' });
+    }
+    mostrarNotificacion('✅ Registro de Santa Cena guardado.', 'exito');
+}
+
+// ==================== ELIMINAR MIEMBRO (MODAL CON VALIDACIÓN) ====================
 async function abrirModalEliminar() {
-    document.getElementById('inputEliminarCodigo').value = ''; document.getElementById('textoConfirmacionEliminar').innerHTML = '';
+    document.getElementById('inputEliminarCodigo').value = '';
+    document.getElementById('textoConfirmacionEliminar').innerHTML = '';
     document.getElementById('modalEliminar').classList.add('activo');
 }
+
 async function buscarYEliminar() {
     const codigo = document.getElementById('inputEliminarCodigo').value.trim();
     if(!codigo) return mostrarNotificacion('Ingresa un código.', 'error');
     const res = await fetch(`${API}/api/miembros/${codigo}`, { credentials: 'include' });
     if(res.status === 404) return mostrarNotificacion('El código ingresado no pertenece a ningún miembro.', 'error');
     const data = await res.json();
-    if(!confirm(`¿Estás seguro que quieres eliminar al hermano ${data.nombre}?`)) return;
+    if(!confirm(`¿Estás seguro que quieres eliminar al hermano ${data.nombre} (Código ${codigo})?`)) return;
     const delRes = await fetch(`${API}/api/miembros/${codigo}`, { method:'DELETE', credentials: 'include' });
     if(delRes.ok) {
         mostrarNotificacion('Miembro eliminado y códigos reordenados.', 'exito');
@@ -376,13 +397,16 @@ async function buscarYEliminar() {
     } else { const err = await delRes.json(); mostrarNotificacion(err.error, 'error'); }
 }
 
+// ==================== ACTUALIZAR MIEMBRO (MODAL CON PRECARGA) ====================
 async function abrirModalActualizar() {
-    document.getElementById('inputActualizarCodigo').value = ''; document.getElementById('formActualizarModal').style.display = 'none';
+    document.getElementById('inputActualizarCodigo').value = '';
+    document.getElementById('formActualizarModal').style.display = 'none';
     document.getElementById('inputActualizarCodigo').style.display = 'block';
     document.getElementById('btnBuscarActualizar').style.display = 'inline-block';
     document.getElementById('btnGuardarActualizar').style.display = 'none';
     document.getElementById('modalActualizar').classList.add('activo');
 }
+
 async function buscarParaActualizar() {
     const codigo = document.getElementById('inputActualizarCodigo').value.trim();
     if(!codigo) return mostrarNotificacion('Ingresa un código.', 'error');
@@ -408,10 +432,12 @@ async function buscarParaActualizar() {
         document.getElementById('div_actualizar_liderazgo_texto').style.display = 'none';
     }
 }
+
 function toggleActualizarLiderazgo() {
     const val = document.getElementById('m_actualizar_liderazgo_si').value;
     document.getElementById('div_actualizar_liderazgo_texto').style.display = val === 'Si' ? 'block' : 'none';
 }
+
 async function guardarActualizacion() {
     const codigo = document.getElementById('inputActualizarCodigo').value.trim();
     const liderazgoSi = document.getElementById('m_actualizar_liderazgo_si').value === 'Si';
@@ -437,7 +463,41 @@ async function guardarActualizacion() {
     }
 }
 
-// ==================== LIMPIEZA Y UTILIDADES ====================
+// ==================== AUDITORÍA (HISTORIAL) ====================
+async function cargarAuditoria() {
+    const res = await fetch(`${API}/api/auditoria`, { credentials: 'include' });
+    const lista = await res.json();
+    let html = "";
+    lista.forEach(n => {
+        const fecha = new Date(n.fecha_hora);
+        const fechaStr = fecha.toLocaleDateString('es-ES');
+        const horaStr = fecha.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+        html += `<tr onclick="mostrarDetalleAuditoria('${n.accion}', '${n.detalles || 'Sin detalles adicionales'}', '${n.usuario_correo}', '${fechaStr} ${horaStr}')" style="cursor:pointer;">
+            <td>${fechaStr} ${horaStr}</td><td>${n.usuario_correo}</td><td>${n.accion}</td>
+        </tr>`;
+    });
+    document.getElementById('tablaAuditoria').innerHTML = html || "<tr><td colspan='3'>No hay actividad registrada.</td></tr>";
+}
+
+function mostrarDetalleAuditoria(accion, detalles, usuario, fecha) {
+    mostrarNotificacion(`[${fecha}] ${usuario}\n\nAcción: ${accion}\n\nDetalles: ${detalles}`, 'info');
+}
+
+// ==================== VERIFICAR CLAVE ADMIN (FINANZAS) ====================
+async function verificarClaveAdmin() {
+    const clave = document.getElementById('inputContraAdmin').value;
+    if(!clave) return mostrarNotificacion('Debes ingresar la clave del Admin.', 'error');
+    const res = await fetch(`${API}/api/verificar-admin`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({password: clave}), credentials: 'include' });
+    if(res.ok) {
+        mostrarNotificacion('Acceso a Finanzas concedido.', 'exito');
+        document.getElementById('modalClaveAdmin').classList.remove('activo');
+        cambiarPestaña('finanzas');
+    } else {
+        mostrarNotificacion('Clave incorrecta. Acceso denegado.', 'error');
+    }
+}
+
+// ==================== LIMPIEZA DE MODALES Y UTILIDADES ====================
 function cerrarModalYLimpiar(modalId) {
     const modal = document.getElementById(modalId);
     modal.classList.remove('activo');
@@ -452,7 +512,23 @@ function cerrarModalYLimpiar(modalId) {
         document.getElementById('formMiembroModal').reset();
     }
     if (modalId === 'modalEliminar') document.getElementById('textoConfirmacionEliminar').innerHTML = '';
-    if (modalId === 'modalActualizar') { document.getElementById('formActualizarModal').style.display = 'none'; document.getElementById('inputActualizarCodigo').style.display = 'block'; document.getElementById('btnBuscarActualizar').style.display = 'inline-block'; document.getElementById('btnGuardarActualizar').style.display = 'none'; document.getElementById('div_actualizar_liderazgo_texto').style.display = 'none'; }
+    if (modalId === 'modalActualizar') {
+        document.getElementById('formActualizarModal').style.display = 'none';
+        document.getElementById('inputActualizarCodigo').style.display = 'block';
+        document.getElementById('btnBuscarActualizar').style.display = 'inline-block';
+        document.getElementById('btnGuardarActualizar').style.display = 'none';
+        document.getElementById('div_actualizar_liderazgo_texto').style.display = 'none';
+    }
 }
+
 const abrirModal = id => document.getElementById(id).classList.add('activo');
 const cerrarModal = id => cerrarModalYLimpiar(id);
+
+// ==================== TEMA OSCURO Y DROPDOWN ====================
+function toggleDropdown() { document.getElementById('headerUser').classList.toggle('abierto'); }
+
+function cambiarTema() {
+    esModoOscuro = !esModoOscuro;
+    document.body.classList.toggle('modo-oscuro', esModoOscuro);
+    document.getElementById('btnTema').innerHTML = esModoOscuro ? '<i class="fa-solid fa-sun"></i>' : '<i class="fa-solid fa-moon"></i>';
+}

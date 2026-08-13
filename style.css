@@ -78,6 +78,142 @@ body {
     }
 }
 
+/* MODO OSCURO: clase para inyectar paleta oscura y forzar colores claros en textos e íconos */
+.dark-mode {
+    --fondo: #0f172a; /* fondo principal oscuro */
+    --card-bg: #0b1220;
+    --borde: rgba(255,255,255,0.04);
+    --texto-oscuro: #f8fafc; /* texto principal brillante */
+    --texto-gris: #cbd5e1;
+}
+
+/* Forzar colores claros para elementos de texto y gráficos dentro del modo oscuro */
+.dark-mode,
+.dark-mode body,
+.dark-mode .app,
+.dark-mode .container {
+    background-color: var(--fondo) !important;
+    color: var(--texto-oscuro) !important;
+}
+
+.dark-mode label,
+.dark-mode p,
+.dark-mode span,
+.dark-mode td,
+.dark-mode th,
+.dark-mode a,
+.dark-mode button,
+.dark-mode input,
+.dark-mode textarea {
+    color: #f8fafc !important;
+}
+
+/* Íconos SVG / fuentes */
+.dark-mode svg,
+.dark-mode .icon,
+.dark-mode .fa,
+.dark-mode i {
+    color: #f8fafc !important;
+    fill: #f8fafc !important;
+}
+
+/* Bloque adicional: fuerza contraste total en modo oscuro para etiquetas, párrafos, spans y celdas */
+.dark-mode-force,
+.modo-oscuro-force,
+.dark-mode-force * {
+    background-color: transparent !important;
+    color: #f8fafc !important;
+}
+
+.dark-mode-force label,
+.dark-mode-force p,
+.dark-mode-force span,
+.dark-mode-force td,
+.dark-mode-force th {
+    color: #f8fafc !important;
+}
+
+.dark-mode-force svg,
+.dark-mode-force .icon,
+.dark-mode-force .fa,
+.dark-mode-force i {
+    color: #f8fafc !important;
+    fill: #f8fafc !important;
+}
+
+/* Aplicar fondo oscuro fuerte cuando se añade la clase de refuerzo */
+.dark-mode-force,
+.modo-oscuro-force,
+.dark-mode-force .app,
+.modo-oscuro-force .app {
+    background-color: #0f172a !important;
+    color: #f8fafc !important;
+}
+
+/* Asegura buen contraste en tarjetas y contenedores */
+.dark-mode .card,
+.dark-mode .panel,
+.dark-mode .dropdown,
+.dark-mode .sidebar {
+    background-color: var(--card-bg) !important;
+    border-color: var(--borde) !important;
+}
+
+/* MODO RESPONSIVO: encabezado fijo y forzar visibilidad de fecha y datos del dropdown de perfil */
+.fixed-header {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 9999;
+    width: 100%;
+}
+
+/* Aplicar display:flex !important directamente sobre la fecha y los datos del Dropdown del perfil
+   Los selectores comunes se incluyen; ajustar si los nombres de clase difieren en el proyecto. */
+.profile-dropdown .date,
+.profile-dropdown .profile-data,
+.profile-dropdown .details,
+.profile-dropdown .info,
+.profile-dropdown .meta {
+    display: flex !important;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+/* En móviles, mantener el encabezado por encima del resto del contenido */
+@media (max-width: 768px) {
+    .fixed-header {
+        position: fixed;
+    }
+
+    /* Fijar el encabezado en móviles para desvincularlo del resto del flujo */
+    .app-header {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        z-index: 99999;
+        width: 100%;
+    }
+
+    /* Forzar display:flex en la fecha y datos del dropdown para mantener visibilidad */
+    .app-header .profile-dropdown .date,
+    .app-header .profile-dropdown .profile-data,
+    .app-header .profile-dropdown .details,
+    .app-header .profile-dropdown .info,
+    .app-header .profile-dropdown .meta {
+        display: flex !important;
+        align-items: center !important;
+        gap: 0.5rem !important;
+    }
+
+    /* Compensar el contenido por el header fijo en pantallas pequeñas */
+    .contenido {
+        padding-top: 70px;
+    }
+}
+
 @keyframes fadeOutSplash {
     to {
         opacity: 0;
@@ -612,7 +748,7 @@ tbody tr:hover {
     }
 
     .header-titles p {
-        display: none;
+        display: block !important;
     }
 
     .modal-content {
@@ -641,9 +777,33 @@ tbody tr:hover {
         font-size: 0.85rem;
     }
 
+    /* Mantener la información del usuario oculta en el header pero mostrarla en el dropdown completo */
     .header-user span:not(.header-avatar) {
         display: none;
     }
+
+    /* En móviles, mostrar el dropdown como panel fijo y completo para que muestre rol, ministerio y correo */
+    .dropdown-menu {
+        position: fixed !important;
+        top: 56px !important;
+        right: 10px !important;
+        left: 10px !important;
+        min-width: unset !important;
+        width: auto !important;
+        display: none;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.25);
+        background: #fff !important;
+        color: #1e293b !important;
+        padding: 14px 16px !important;
+        border-radius: 10px !important;
+    }
+
+    .header-user.abierto .dropdown-menu {
+        display: block !important;
+    }
+
+    .dropdown-menu .d-label { color: #0c4d8e !important; }
+    .dropdown-menu .d-value { color: #374151 !important; display: block !important; }
 
     .btn-submit {
         width: 100%;

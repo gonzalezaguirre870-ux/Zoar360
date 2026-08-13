@@ -128,10 +128,10 @@
                                     onclick="abrirModal('modalMiembro')"><i class="fa-solid fa-plus"></i> Agregar
                                     Miembro</button>
                                 <button class="btn-submit" style="background:#ef4444; width:auto; padding:10px 18px;"
-                                    id="btnEliminarAdmin" onclick="abrirModalEliminar()"><i
+                                    id="btnEliminarAdmin" onclick="abrirModal('modalEliminar')"><i
                                         class="fa-solid fa-trash"></i> Eliminar Miembro</button>
                                 <button class="btn-submit" style="background:#f59e0b; width:auto; padding:10px 18px;"
-                                    id="btnActualizarAdmin" onclick="abrirModalActualizar()"><i
+                                    id="btnActualizarAdmin" onclick="abrirModal('modalActualizar')"><i
                                         class="fa-solid fa-pen"></i> Actualizar Información</button>
                             </div>
                         </div>
@@ -163,14 +163,15 @@
                         </div>
                         <div style="margin-bottom: 15px; background: #f1f5f9; padding: 10px; border-radius: 6px;"
                             class="info-culto-box">
-                            <p>📅 <strong>Día de hoy:</strong> <span id="diaActual">---</span> | 🏛️ <strong>Grupo
+                            <p><i class="fa-solid fa-calendar-days"></i> <strong>Día de hoy:</strong> <span
+                                    id="diaActual">---</span> | <i class="fa-solid fa-church"></i> <strong>Grupo
                                     programado:</strong> <span id="grupoActual">---</span></p>
                         </div>
                         <div class="tabla-wrap">
                             <table>
                                 <thead>
                                     <tr>
-                                        <th>Código</th>
+                                        <th>N°</th>
                                         <th>Nombre</th>
                                         <th>Ministerios</th>
                                         <th>Asistencia</th>
@@ -282,26 +283,28 @@
                         </div>
                     </div>
                 </section>
-                </nav>
+            </main>
         </div>
     </div>
 
-    <!-- ==================== BLOQUE DE MODALES TOTALMENTE CORREGIDO ==================== -->
+    <!-- ==================== CONTROL DE MODALES CORREGIDO ==================== -->
     <div id="modalNotificacion" class="modal">
         <div class="modal-content" style="max-width:400px; text-align:center; padding:25px;">
-            <div id="iconoNotificacion" style="font-size:3rem; margin-bottom:10px;">⚠️</div>
-            <div id="textoNotificacion" style="font-size:1rem; margin-bottom:20px; color:#1e293b; font-weight:500;">
-                Mensaje de alerta</div>
+            <!-- Se quita la duplicidad de iconos: ahora JS inyectará una única clase limpia aquí -->
+            <div style="margin-bottom:15px;"><i id="iconoNotificacion" style="font-size:3.5rem;"></i></div>
+            <div id="textoNotificacion"
+                style="font-size:1.05rem; margin-bottom:20px; font-weight:500; line-height:1.5;">Mensaje de alerta</div>
+            <!-- Se remueve la palabra Enter del texto del botón manteniendo la accesibilidad intacta -->
             <button class="btn-submit"
-                onclick="document.getElementById('modalNotificacion').classList.remove('activo')">Entendido
-                (Enter)</button>
+                onclick="document.getElementById('modalNotificacion').classList.remove('activo')">Entendido</button>
         </div>
     </div>
+
 
     <div id="modalCreditos" class="modal">
         <div class="modal-content" style="max-width:450px; text-align:center; padding:25px;">
             <span class="modal-close" onclick="cerrarModalYLimpiar('modalCreditos')">&times;</span>
-            <img src="logoad.png" alt="Logo" style="width:70px; margin-bottom:10px;" />
+            <img src="icono.png" alt="Logo" style="width:70px; margin-bottom:10px;" />
             <h2 style="color:#0c4d8e; margin-bottom:15px;">Zoar360</h2>
             <p style="margin: 5px 0;"><strong>Propuesto por:</strong></p>
             <p style="margin: 0 0 15px 0; color:#475569; font-weight:500;">Pastor Víctor Aguirre</p>
@@ -400,7 +403,7 @@
                 <label>Ingrese el Código del Miembro a Modificar</label>
                 <div class="input-icon" style="margin-bottom:10px;">
                     <i class="fa-solid fa-magnifying-glass"></i>
-                    <input type="text" id="inputActualizarCodigo" placeholder="Ej: 0003" />
+                    <input type="text" id="inputActualizarCodigo" placeholder="Ej: 0001" />
                 </div>
                 <button class="btn-submit" id="btnBuscarActualizar" onclick="buscarParaActualizar()"><i
                         class="fa-solid fa-search"></i> Buscar Registro</button>

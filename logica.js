@@ -1,527 +1,42 @@
-const API = window.location.hostname === '127.0.0.1' || window.location.hostname === 'localhost' ? 'http://127.0.0.1:5000' : 'https://zoar360.onrender.com';
+const API = window.location.hostname === '127.0.0.1' || window.location.hostname === 'localhost'
+    ? 'http://127.0.0.1:5000'
+    : 'https://zoar360.onrender.com';
+
 let rol = null;
 let esModoOscuro = false;
-let intentosFallidos = 0;
-
-const $ = id => document.getElementById(id);
-
-// ==================== NOTIFICACIONES PERSONALIZADAS ====================
-const mostrarNotificacion = (mensaje, tipo = 'error') => {
-    const icono = tipo === 'exito' ? '✅' : tipo === 'info' ? 'ℹ️' : '⚠️';
-    document.getElementById('iconoNotificacion').textContent = icono;
-    document.getElementById('textoNotificacion').textContent = mensaje;
-    document.getElementById('modalNotificacion').classList.add('activo');
-};
-
-// Cerrar notificación con tecla Enter
-document.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter' && document.getElementById('modalNotificacion').classList.contains('activo')) {
-        document.getElementById('modalNotificacion').classList.remove('activo');
-    }
-});
-
-// ==================== MAPEO DE ROLES ====================
-const MAPA_ROLES = {
-    'Secretaria_Embajadores_de_Cristo': { ministerio: 'Embajadores de Cristo', rol: 'Secretaria' },
-    'Secretario_Fraternidad_de_Varones': { ministerio: 'Fraternidad de Varones', rol: 'Secretario' },
-    'Secretario_Exploradores_del_Rey': { ministerio: 'Exploradores del Rey', rol: 'Secretario' },
-    'Secretario_Misioneritas': { ministerio: 'Misioneritas', rol: 'Secretaria' },
-    'Secretaria_Concilio_Misionero_Femenil': { ministerio: 'Concilio Misionero Femenil', rol: 'Secretaria' },
-    'Secretario_General': { ministerio: 'Culto General', rol: 'Secretario General' },
-    'Pastor': { ministerio: 'pastor', rol: 'pastor' },
-    'Administrador': { ministerio: 'Administración', rol: 'Administrador' }
-};
-
-// ==================== CIERRE DE MENÚ MÓVIL ====================
-document.addEventListener('click', function (e) {
-    const sidebar = document.getElementById('sidebarNav');
-    const menuBtn = document.getElementById('btnMenuMovil');
-    if (!sidebar.contains(e.target) && !menuBtn.contains(e.target) && document.body.classList.contains('sidebar-abierto')) {
-        document.body.classList.remove('sidebar-abierto');
-    }
-});
-
-document.querySelectorAll('#sidebarNav .tab-btn, #sidebarNav .btn-about').forEach(btn => {
-    btn.addEventListener('click', () => {
-        if (window.innerWidth <= 768) document.body.classList.remove('sidebar-abierto');
-    });
-});
-
-// ==================== NAVEGACIÓN ====================
-document.addEventListener('DOMContentLoaded', () => {
-    document.querySelectorAll('.sidebar .tab-btn').forEach(btn => {
-        btn.addEventListener('click', function () {
-            const targetId = this.dataset.tab;
-            if (targetId === 'eventos' || targetId === 'privilegios') {
-                mostrarNotificacion('Módulo En Desarrollo (Versión 2.0)', 'info');
-                return;
-            }
-            if (targetId === 'finanzas' && rol === 'Secretario_General') {
-                document.getElementById('modalClaveAdmin').classList.add('activo');
-                return;
-            }
-            cambiarPestaña(targetId);
-        });
-    });
-});
-
-const cambiarPestaña = id => {
-    document.querySelectorAll('.tab-content, .sidebar .tab-btn').forEach(el => el.classList.remove('active'));
-    document.getElementById(id).classList.add('active');
-    document.querySelector(`.tab-btn[data-tab="${id}"]`).classList.add('active');
-    if (id === 'membresia') cargarMiembros();
-    if (id === 'asistencia') cargarAsistencia();
-    if (id === 'santacena') iniciarCronometroSantaCena();
-    if (id === 'solicitudes') cargarSolicitudes();
-    if (id === 'auditoria') cargarAuditoria();
-};
-
-// ==================== LOGIN CON BLOQUEO ====================
-let temporizadorLogin = null;
-
-async function iniciarSesion(e) {
-    e.preventDefault();
-    const emailInp = document.getElementById('l_email');
-    const passInp = document.getElementById('l_pass');
-
-    if (temporizadorLogin) {
-        mostrarNotificacion('Espera a que termine el bloqueo.', 'error');
-        return;
-    }
-
-    try {
-        const res = await fetch(`${API}/api/login`, {
-            method: 'POST', headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email: emailInp.value, password: passInp.value }),
-            credentials: 'include'
-        });
-        const data = await res.json();
-
-        if (!res.ok) {
-            if (res.status === 429) {
-                // Bloqueo activo
-                mostrarNotificacion(data.error, 'error');
-                const segundos = parseInt(data.error.match(/\d+/));
-                if (segundos) iniciarTemporizadorLogin(segundos);
-                return;
-            }
-            // Fallo normal
-            mostrarNotificacion('Error: Credenciales Inválidas', 'error');
-            emailInp.value = '';
-            passInp.value = '';
-            return;
-        }
-
-        // Éxito
-        rol = data.rol;
-        sessionStorage.setItem('zoar360_user', JSON.stringify({ rol: data.rol, email: data.email }));
-        if (rol === 'Administrador') localStorage.setItem('zoar360_admin', 'true');
-
-        document.getElementById('pantallaLogin').style.display = 'none';
-        document.getElementById('appPrincipal').style.display = 'block';
-
-        const fecha = new Date().toLocaleDateString('es-ES', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
-        document.getElementById('fechaHeader').textContent = fecha;
-
-        const info = MAPA_ROLES[rol] || { ministerio: 'General', rol: rol };
-        document.getElementById('nombreUsuarioHeader').textContent = info.rol;
-        document.getElementById('rolUsuarioDropdown').textContent = info.rol;
-        document.getElementById('ministerioUsuarioDropdown').textContent = info.ministerio;
-        document.getElementById('correoUsuarioDropdown').textContent = data.email;
-
-        const esAdminPastor = (rol === 'Administrador' || rol === 'Pastor');
-        const esSecretarioGeneral = (rol === 'Secretario_General');
-        const esSecretarioGrupo = rol.startsWith('Secretario_') && rol !== 'Secretario_General';
-
-        document.querySelectorAll('.sidebar .tab-btn').forEach(b => b.style.display = 'flex');
-        document.getElementById('btnSolicitudes').style.display = esAdminPastor ? 'flex' : 'none';
-        document.getElementById('btnFinanzas').style.display = (esAdminPastor || esSecretarioGeneral) ? 'flex' : 'none';
-        document.getElementById('btnEventos').style.display = esAdminPastor ? 'flex' : 'none';
-        document.getElementById('btnPrivilegios').style.display = esAdminPastor ? 'flex' : 'none';
-        document.getElementById('btnAuditoria').style.display = esAdminPastor ? 'flex' : 'none';
-        document.getElementById('btnSantaCena').style.display = (esAdminPastor || esSecretarioGeneral) ? 'flex' : 'none';
-
-        if (esSecretarioGrupo) {
-            document.getElementById('btnMembresia').style.display = 'none';
-            document.getElementById('btnSantaCena').style.display = 'none';
-            document.getElementById('btnEliminarAdmin').style.display = 'none';
-            document.getElementById('btnActualizarAdmin').style.display = 'none';
-            document.getElementById('btnAuditoria').style.display = 'none';
-            document.getElementById('btnSolicitudes').style.display = 'none';
-            document.getElementById('btnFinanzas').style.display = 'none';
-            document.getElementById('btnEventos').style.display = 'none';
-            document.getElementById('btnPrivilegios').style.display = 'none';
-            cambiarPestaña('asistencia');
-        } else {
-            document.getElementById('btnEliminarAdmin').style.display = 'inline-flex';
-            document.getElementById('btnActualizarAdmin').style.display = 'inline-flex';
-            cambiarPestaña('membresia');
-        }
-        document.body.classList.remove('sidebar-abierto');
-    } catch (e) {
-        mostrarNotificacion('Error de conexión con el servidor.', 'error');
-    }
-}
-
-function iniciarTemporizadorLogin(segundos) {
-    const btnLogin = document.querySelector('#formLogin .btn-submit');
-    btnLogin.disabled = true;
-    btnLogin.textContent = `Espera ${segundos}s`;
-
-    let tiempoRestante = segundos;
-    temporizadorLogin = setInterval(() => {
-        tiempoRestante--;
-        btnLogin.textContent = `Espera ${tiempoRestante}s`;
-        if (tiempoRestante <= 0) {
-            clearInterval(temporizadorLogin);
-            temporizadorLogin = null;
-            btnLogin.disabled = false;
-            btnLogin.textContent = 'Iniciar Sesión';
-        }
-    }, 1000);
-}
-
-// ==================== SEGURIDAD Y CIERRE DE SESIÓN ====================
-window.addEventListener('beforeunload', () => {
-    if (rol !== 'Administrador') sessionStorage.removeItem('zoar360_user');
-});
-document.addEventListener('visibilitychange', () => {
-    if (document.hidden && rol !== 'Administrador') {
-        sessionStorage.removeItem('zoar360_user');
-        window.location.href = window.location.href;
-    }
-});
-function cerrarSesion() { sessionStorage.clear(); if (rol !== 'Administrador') localStorage.clear(); window.location.href = window.location.href; }
-
-// ==================== FORMULARIO DINÁMICO (Liderazgo) ====================
-function toggleLiderazgoPorTipo() {
-    const tipo = document.getElementById('m_tipo').value;
-    const divLiderazgoPregunta = document.getElementById('div_liderazgo_pregunta');
-    const divLiderazgoTexto = document.getElementById('div_liderazgo_texto');
-
-    if (tipo === 'Propiedad') {
-        divLiderazgoPregunta.style.display = 'block';
-        document.getElementById('m_liderazgo_si').value = 'No';
-        divLiderazgoTexto.style.display = 'none';
-    } else {
-        divLiderazgoPregunta.style.display = 'none';
-        divLiderazgoTexto.style.display = 'none';
-    }
-}
-
-function toggleLiderazgoSiNo() {
-    const val = document.getElementById('m_liderazgo_si').value;
-    document.getElementById('div_liderazgo_texto').style.display = val === 'Si' ? 'block' : 'none';
-}
-
-// ==================== GUARDAR MIEMBRO / SOLICITUD (BOTONES REALES) ====================
-async function guardarMiembro(e) {
-    e.preventDefault();
-    const nombre = document.getElementById('m_nombre').value.trim();
-    const tipo = document.getElementById('m_tipo').value;
-    if (!nombre) return mostrarNotificacion('El nombre no puede estar vacío.', 'error');
-
-    let liderazgoTexto = null;
-    if (tipo === 'Propiedad') {
-        const esLiderazgo = document.getElementById('m_liderazgo_si').value === 'Si';
-        liderazgoTexto = esLiderazgo ? document.getElementById('m_liderazgo_texto').value.trim() : null;
-        if (esLiderazgo && !liderazgoTexto) return mostrarNotificacion('Si marca Sí, debe especificar el liderazgo.', 'error');
-    }
-
-    let grupos = [];
-    if (document.getElementById('g_femenil').checked) grupos.push('Concilio Misionero Femenil');
-    if (document.getElementById('g_misioneritas').checked) grupos.push('Misioneritas');
-    if (document.getElementById('g_varones').checked) grupos.push('Fraternidad de Varones');
-    if (document.getElementById('g_exploradores').checked) grupos.push('Exploradores del Rey');
-    if (document.getElementById('g_embajadores').checked) grupos.push('Embajadores de Cristo');
-
-    const datos = {
-        nombre: nombre,
-        telefono: document.getElementById('m_telefono').value.trim() || null,
-        tipo: tipo,
-        grupo: grupos.join(', ') || 'General',
-        liderazgo: liderazgoTexto
-    };
-
-    const esAdminPastor = (rol === 'Administrador' || rol === 'Pastor');
-    const url = esAdminPastor ? `${API}/api/miembros` : `${API}/api/solicitudes`;
-
-    const res = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(datos), credentials: 'include' });
-    if (res.ok) {
-        mostrarNotificacion(esAdminPastor ? 'Miembro registrado con éxito.' : 'Solicitud enviada.', 'exito');
-        cerrarModalYLimpiar('modalMiembro');
-        cargarMiembros();
-    } else {
-        const err = await res.json();
-        mostrarNotificacion(err.error || 'Error al guardar.', 'error');
-    }
-}
-
-// ==================== CARGAR MIEMBROS (LISTA) ====================
-async function cargarMiembros() {
-    const res = await fetch(`${API}/api/miembros`, { credentials: 'include' });
-    const lista = await res.json();
-    document.getElementById('tablaMiembros').innerHTML = lista.map(m =>
-        `<tr>
-            <td><strong>${m.codigo}</strong></td>
-            <td>${m.nombre}</td>
-            <td>${m.telefono || '---'}</td>
-            <td><span class="badge badge-propiedad">${m.tipo}</span></td>
-            <td>${m.grupo}</td>
-        </tr>`
-    ).join('');
-}
-
-// ==================== CARGAR SOLICITUDES (PASTOR/ADMIN) ====================
-async function cargarSolicitudes() {
-    const res = await fetch(`${API}/api/solicitudes`, { credentials: 'include' });
-    const lista = await res.json();
-    document.getElementById('tablaSolicitudes').innerHTML = lista.map(s => `<tr><td>${s.nombre}</td><td><span class="badge badge-pendiente" style="background:#fef3c7;">${s.estado}</span></td><td><button class="btn-submit" style="width:auto; padding:5px 10px; font-size:0.8rem;" onclick="procesarSolicitud(${s.id}, 'Aprobada')">Aprobar</button></td></tr>`).join('');
-}
-
-async function procesarSolicitud(id, estado) {
-    await fetch(`${API}/api/solicitudes/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ estado: estado }), credentials: 'include' });
-    mostrarNotificacion('Solicitud procesada.', 'exito');
-    cargarSolicitudes();
-    cargarMiembros();
-}
-
-// ==================== ASISTENCIA (CON FILTRO) ====================
-async function cargarAsistencia() {
-    const ahora = new Date();
-    const dias = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
-    const dia = dias[ahora.getDay()];
-    const mapa = { 'Martes': 'Concilio Misionero Femenil', 'Miércoles': 'Misioneritas', 'Jueves': 'Fraternidad de Varones', 'Viernes': 'Exploradores del Rey', 'Sábado': 'Embajadores de Cristo', 'Domingo': 'Culto General' };
-    let grupo = mapa[dia] || '';
-
-    const btnRecargar = document.querySelector('.btn-submit[onclick="cargarAsistencia()"]');
-    if (!grupo) {
-        document.getElementById('diaActual').textContent = dia;
-        document.getElementById('grupoActual').textContent = 'Sin culto hoy';
-        document.getElementById('tablaAsistencia').innerHTML = "<tr><td colspan='5'>Hoy no hay culto.</td></tr>";
-        if (btnRecargar) { btnRecargar.disabled = true; btnRecargar.style.opacity = '0.5'; }
-        return;
-    } else {
-        if (btnRecargar) { btnRecargar.disabled = false; btnRecargar.style.opacity = '1'; }
-    }
-
-    document.getElementById('diaActual').textContent = dia;
-    document.getElementById('grupoActual').textContent = grupo;
-
-    let endpoint = (rol.startsWith('Secretario_') && rol !== 'Secretario_General') ? `${API}/api/asistencia/grupo/${grupo}` : `${API}/api/miembros`;
-    const res = await fetch(endpoint, { credentials: 'include' });
-    const lista = await res.json();
-    document.getElementById('tablaAsistencia').innerHTML = lista.map(m =>
-        `<tr><td>${m.codigo}</td><td>${m.nombre}</td><td>${m.grupo}</td><td><input type="checkbox" class="asistencia-check" data-id="${m.id}" /></td><td><strong>${m.total_asistencias || 0}</strong></td></tr>`
-    ).join('');
-}
-
-async function guardarAsistencia() {
-    const checks = document.querySelectorAll('.asistencia-check:checked');
-    if (!checks.length) return mostrarNotificacion('Selecciona al menos un miembro.', 'error');
-    for (const check of checks) {
-        const codigo = check.closest('tr').querySelector('td:first-child').innerText.trim();
-        const res = await fetch(`${API}/api/marcar-asistencia`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ codigo }), credentials: 'include' });
-        if (!res.ok) {
-            const data = await res.json();
-            return mostrarNotificacion(data.error || 'Error al guardar.', 'error');
-        }
-    }
-    mostrarNotificacion('✅ Asistencias guardadas.', 'exito');
-    cargarAsistencia();
-}
-
-// ==================== SANTA CENA (CRONÓMETRO) ====================
 let intervaloActual = null;
-
-function iniciarCronometroSantaCena() {
-    if (intervaloActual) clearInterval(intervaloActual);
-    cargarSantaCena();
-    intervaloActual = setInterval(() => {
-        const hoy = new Date();
-        let año = hoy.getFullYear(); let mes = hoy.getMonth();
-        let primerDiaMes = new Date(año, mes, 1);
-        let primerDomingo = 1 + ((7 - primerDiaMes.getDay()) % 7);
-        let fechaSantaCena = new Date(año, mes, primerDomingo);
-        if (hoy > fechaSantaCena) { mes++; if (mes > 11) { mes = 0; año++; } primerDiaMes = new Date(año, mes, 1); primerDomingo = 1 + ((7 - primerDiaMes.getDay()) % 7); fechaSantaCena = new Date(año, mes, primerDomingo); }
-        const diferencia = fechaSantaCena - hoy;
-        if (diferencia <= 0) { document.getElementById('cronometroSantaCena').innerHTML = `<span style="color:#22c55e;">¡Hoy es el día!</span>`; return; }
-        const dias = Math.floor(diferencia / (1000 * 60 * 60 * 24));
-        const horas = Math.floor((diferencia % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-        const minutos = Math.floor((diferencia % (1000 * 60 * 60)) / (1000 * 60));
-        const segundos = Math.floor((diferencia % (1000 * 60)) / 1000);
-        document.getElementById('cronometroSantaCena').textContent = `${dias} días, ${horas} h, ${minutos} m, ${segundos} s`;
-    }, 1000);
-}
-
-async function cargarSantaCena() {
-    const res = await fetch(`${API}/api/miembros`, { credentials: 'include' });
-    const lista = await res.json();
-    const filtrados = lista.filter(m => m.tipo === 'Propiedad');
-    document.getElementById('tablaSantaCena').innerHTML = filtrados.map(m =>
-        `<tr><td><strong>${m.codigo}</strong></td><td>${m.nombre}</td><td><input type="checkbox" class="sc-check" data-id="${m.id}" /></td></tr>`
-    ).join('');
-}
-
-async function guardarSantaCena() {
-    const ahora = new Date();
-    if (ahora.getDay() !== 0) return mostrarNotificacion('La Santa Cena solo se registra los Domingos.', 'error');
-    const fecha = ahora.toISOString().split('T')[0];
-    const checks = document.querySelectorAll('.sc-check:checked');
-    if (!checks.length) return mostrarNotificacion('No hay asistentes seleccionados.', 'error');
-    for (const check of checks) {
-        await fetch(`${API}/api/santacena`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ miembro_id: parseInt(check.dataset.id), fecha: fecha, asistio: true }), credentials: 'include' });
-    }
-    mostrarNotificacion('✅ Registro de Santa Cena guardado.', 'exito');
-}
-
-// ==================== ELIMINAR MIEMBRO (MODAL CON VALIDACIÓN) ====================
-async function abrirModalEliminar() {
-    document.getElementById('inputEliminarCodigo').value = '';
-    document.getElementById('textoConfirmacionEliminar').innerHTML = '';
-    document.getElementById('modalEliminar').classList.add('activo');
-}
-
-async function buscarYEliminar() {
-    const codigo = document.getElementById('inputEliminarCodigo').value.trim();
-    if (!codigo) return mostrarNotificacion('Ingresa un código.', 'error');
-    const res = await fetch(`${API}/api/miembros/${codigo}`, { credentials: 'include' });
-    if (res.status === 404) return mostrarNotificacion('El código ingresado no pertenece a ningún miembro.', 'error');
-    const data = await res.json();
-    if (!confirm(`¿Estás seguro que quieres eliminar al hermano ${data.nombre} (Código ${codigo})?`)) return;
-    const delRes = await fetch(`${API}/api/miembros/${codigo}`, { method: 'DELETE', credentials: 'include' });
-    if (delRes.ok) {
-        mostrarNotificacion('Miembro eliminado y códigos reordenados.', 'exito');
-        cerrarModalYLimpiar('modalEliminar');
-        cargarMiembros();
-    } else { const err = await delRes.json(); mostrarNotificacion(err.error, 'error'); }
-}
-
-// ==================== ACTUALIZAR MIEMBRO (MODAL CON PRECARGA) ====================
-async function abrirModalActualizar() {
-    document.getElementById('inputActualizarCodigo').value = '';
-    document.getElementById('formActualizarModal').style.display = 'none';
-    document.getElementById('inputActualizarCodigo').style.display = 'block';
-    document.getElementById('btnBuscarActualizar').style.display = 'inline-block';
-    document.getElementById('btnGuardarActualizar').style.display = 'none';
-    document.getElementById('modalActualizar').classList.add('activo');
-}
-
-async function buscarParaActualizar() {
-    const codigo = document.getElementById('inputActualizarCodigo').value.trim();
-    if (!codigo) return mostrarNotificacion('Ingresa un código.', 'error');
-    const res = await fetch(`${API}/api/miembros/${codigo}`, { credentials: 'include' });
-    if (res.status === 404) return mostrarNotificacion('El código ingresado no pertenece a ningún miembro.', 'error');
-    const data = await res.json();
-    document.getElementById('inputActualizarCodigo').style.display = 'none';
-    document.getElementById('btnBuscarActualizar').style.display = 'none';
-    document.getElementById('btnGuardarActualizar').style.display = 'inline-block';
-    document.getElementById('formActualizarModal').style.display = 'block';
-    document.getElementById('m_actualizar_nombre').value = data.nombre.replace(/ \(.*\)/, '');
-    document.getElementById('m_actualizar_telefono').value = data.telefono || '';
-    document.getElementById('m_actualizar_tipo').value = data.tipo;
-    document.getElementById('m_actualizar_grupo').value = data.grupo;
-
-    const match = data.nombre.match(/\((.*)\)/);
-    if (match && match[1]) {
-        document.getElementById('m_actualizar_liderazgo_si').value = 'Si';
-        document.getElementById('m_actualizar_liderazgo_texto').value = match[1];
-        document.getElementById('div_actualizar_liderazgo_texto').style.display = 'block';
-    } else {
-        document.getElementById('m_actualizar_liderazgo_si').value = 'No';
-        document.getElementById('div_actualizar_liderazgo_texto').style.display = 'none';
-    }
-}
-
-function toggleActualizarLiderazgo() {
-    const val = document.getElementById('m_actualizar_liderazgo_si').value;
-    document.getElementById('div_actualizar_liderazgo_texto').style.display = val === 'Si' ? 'block' : 'none';
-}
-
-async function guardarActualizacion() {
-    const codigo = document.getElementById('inputActualizarCodigo').value.trim();
-    const liderazgoSi = document.getElementById('m_actualizar_liderazgo_si').value === 'Si';
-    const liderazgoTexto = document.getElementById('m_actualizar_liderazgo_texto').value.trim();
-    if (liderazgoSi && !liderazgoTexto) return mostrarNotificacion('Debes especificar el liderazgo.', 'error');
-
-    const datos = {
-        nombre: document.getElementById('m_actualizar_nombre').value.trim(),
-        telefono: document.getElementById('m_actualizar_telefono').value.trim(),
-        tipo: document.getElementById('m_actualizar_tipo').value,
-        grupo: document.getElementById('m_actualizar_grupo').value,
-        liderazgo: liderazgoSi ? liderazgoTexto : null
-    };
-    if (!datos.nombre) return mostrarNotificacion('El nombre no puede estar vacío.', 'error');
-
-    const res = await fetch(`${API}/api/miembros/${codigo}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(datos), credentials: 'include' });
-    if (res.ok) {
-        mostrarNotificacion('Información actualizada.', 'exito');
-        cerrarModalYLimpiar('modalActualizar');
-        cargarMiembros(); // Refresca la lista sin expulsar al usuario
-    } else {
-        mostrarNotificacion('Error al actualizar.', 'error');
-    }
-}
-
-// ==================== AUDITORÍA (HISTORIAL) ====================
-async function cargarAuditoria() {
-    const res = await fetch(`${API}/api/auditoria`, { credentials: 'include' });
-    const lista = await res.json();
-    let html = "";
-    lista.forEach(n => {
-        const fecha = new Date(n.fecha_hora);
-        const fechaStr = fecha.toLocaleDateString('es-ES');
-        const horaStr = fecha.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
-        html += `<tr onclick="mostrarDetalleAuditoria('${n.accion}', '${n.detalles || 'Sin detalles adicionales'}', '${n.usuario_correo}', '${fechaStr} ${horaStr}')" style="cursor:pointer;">
-            <td>${fechaStr} ${horaStr}</td><td>${n.usuario_correo}</td><td>${n.accion}</td>
-        </tr>`;
-    });
-    document.getElementById('tablaAuditoria').innerHTML = html || "<tr><td colspan='3'>No hay actividad registrada.</td></tr>";
-}
-
-function mostrarDetalleAuditoria(accion, detalles, usuario, fecha) {
-    mostrarNotificacion(`[${fecha}] ${usuario}\n\nAcción: ${accion}\n\nDetalles: ${detalles}`, 'info');
-}
-
-// ==================== VERIFICAR CLAVE ADMIN (FINANZAS) ====================
-async function verificarClaveAdmin() {
-    const clave = document.getElementById('inputContraAdmin').value;
-    if (!clave) return mostrarNotificacion('Debes ingresar la clave del Admin.', 'error');
-    const res = await fetch(`${API}/api/verificar-admin`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ password: clave }), credentials: 'include' });
-    if (res.ok) {
-        mostrarNotificacion('Acceso a Finanzas concedido.', 'exito');
-        document.getElementById('modalClaveAdmin').classList.remove('activo');
-        cambiarPestaña('finanzas');
-    } else {
-        mostrarNotificacion('Clave incorrecta. Acceso denegado.', 'error');
-    }
-}
-
-const API = window.location.hostname === '127.0.0.1' || window.location.hostname === 'localhost' ? 'http://127.0.0.1:5000' : 'https://onrender.com';
-let rol = null;
-let esModoOscuro = false;
-let intentosFallidos = 0;
+let mostrarLiderazgo = false;
 
 const $ = id => document.getElementById(id);
 
-// ==================== NOTIFICACIONES PERSONALIZADAS ====================
+function formatoNombreSinCargo(nombre) {
+    if (!nombre) return '';
+    return nombre.replace(/\s*\([^)]*\)\s*$/g, '').trim();
+}
+
+// ==================== NOTIFICACIONES DE FONT AWESOME EXCLUSIVAS ====================
 const mostrarNotificacion = (mensaje, tipo = 'error') => {
-    const icono = tipo === 'exito' ? '✅' : tipo === 'info' ? 'ℹ️' : '⚠️';
     const iconoEl = $('iconoNotificacion');
     const textoEl = $('textoNotificacion');
     const modalNoti = $('modalNotificacion');
 
     if (iconoEl && textoEl && modalNoti) {
-        iconoEl.textContent = icono;
-        textoEl.innerHTML = mensaje; // Permite renderizar el HTML detallado de auditoría
+        if (tipo === 'exito') {
+            iconoEl.className = 'fa-solid fa-circle-check';
+            iconoEl.style.color = '#22c55e';
+        } else if (tipo === 'info') {
+            iconoEl.className = 'fa-solid fa-circle-info';
+            iconoEl.style.color = '#3b82f6';
+        } else {
+            iconoEl.className = 'fa-solid fa-circle-exclamation';
+            iconoEl.style.color = '#ef4444';
+        }
+        textoEl.innerHTML = mensaje;
         modalNoti.classList.add('activo');
-
-        // Reordenar al final del body por JS para blindarlo contra problemas de z-index (Contextos de apilamiento)
-        document.body.appendChild(modalNoti);
+        document.body.appendChild(modalNoti); // Previene ocultamiento detrás de modales
     }
 };
 
-// Cerrar notificación con tecla Enter
 document.addEventListener('keydown', (e) => {
     const modalNoti = $('modalNotificacion');
     if (e.key === 'Enter' && modalNoti && modalNoti.classList.contains('activo')) {
@@ -529,7 +44,6 @@ document.addEventListener('keydown', (e) => {
     }
 });
 
-// ==================== MAPEO DE ROLES Y GÉNEROS OFICIALES ====================
 const MAPA_ROLES = {
     'Secretaria_Embajadores_de_Cristo': { ministerio: 'Embajadores de Cristo', rol: 'Secretaria' },
     'Secretario_Fraternidad_de_Varones': { ministerio: 'Fraternidad de Varones', rol: 'Secretario' },
@@ -541,7 +55,6 @@ const MAPA_ROLES = {
     'Administrador': { ministerio: 'Administración', rol: 'Administrador' }
 };
 
-// ==================== CIERRE DE MENÚ MÓVIL ====================
 document.addEventListener('click', function (e) {
     const sidebar = $('sidebarNav');
     const menuBtn = $('btnMenuMovil');
@@ -556,26 +69,22 @@ document.querySelectorAll('#sidebarNav .tab-btn, #sidebarNav .btn-about').forEac
     });
 });
 
-// ==================== NAVEGACIÓN ====================
 document.addEventListener('DOMContentLoaded', () => {
-    // Intentar recuperar sesión persistente si existe
     const sesionGuardada = sessionStorage.getItem('zoar360_user');
     if (sesionGuardada) {
         const datosUser = JSON.parse(sesionGuardada);
         rol = datosUser.rol;
         configurarInterfazPostLogin(datosUser.email);
     }
-
     document.querySelectorAll('.sidebar .tab-btn').forEach(btn => {
         btn.addEventListener('click', function () {
             const targetId = this.dataset.tab;
             if (targetId === 'eventos' || targetId === 'privilegios') {
-                mostrarNotificacion('Módulo En Desarrollo (Versión 2.0)', 'info');
+                mostrarNotificacion('Módulo En Desarrollo (Próximamente Versión 2.0)', 'info');
                 return;
             }
             if (targetId === 'finanzas' && rol === 'Secretario_General') {
-                const modalClave = $('modalClaveAdmin');
-                if (modalClave) modalClave.classList.add('activo');
+                $('modalClaveAdmin').classList.add('activo');
                 return;
             }
             cambiarPestaña(targetId);
@@ -585,12 +94,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
 const cambiarPestaña = id => {
     document.querySelectorAll('.tab-content, .sidebar .tab-btn').forEach(el => el.classList.remove('active'));
-
-    const targetTab = $(id);
-    const targetBtn = document.querySelector(`.tab-btn[data-tab="${id}"]`);
-
-    if (targetTab) targetTab.classList.add('active');
-    if (targetBtn) targetBtn.classList.add('active');
+    if ($(id)) $(id).classList.add('active');
+    const btn = document.querySelector(`.tab-btn[data-tab="${id}"]`);
+    if (btn) btn.classList.add('active');
 
     if (id === 'membresia') cargarMiembros();
     if (id === 'asistencia') cargarAsistencia();
@@ -599,25 +105,18 @@ const cambiarPestaña = id => {
     if (id === 'auditoria') cargarAuditoria();
 };
 
-// ==================== LOGIN CON BLOQUEO ====================
 let temporizadorLogin = null;
 
 async function iniciarSesion(e) {
     if (e) e.preventDefault();
     const emailInp = $('l_email');
     const passInp = $('l_pass');
-
-    if (temporizadorLogin) {
-        mostrarNotificacion('Espera a que termine el bloqueo.', 'error');
-        return;
-    }
+    if (temporizadorLogin) return;
 
     try {
         const res = await fetch(`${API}/api/login`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email: emailInp.value, password: passInp.value }),
-            credentials: 'include'
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: emailInp.value, password: passInp.value }), credentials: 'include'
         });
         const data = await res.json();
 
@@ -629,82 +128,91 @@ async function iniciarSesion(e) {
                 return;
             }
             mostrarNotificacion('Error: Credenciales Inválidas', 'error');
-            if (emailInp) emailInp.value = '';
-            if (passInp) passInp.value = '';
+            emailInp.value = ''; passInp.value = '';
             return;
         }
 
         rol = data.rol;
         sessionStorage.setItem('zoar360_user', JSON.stringify({ rol: data.rol, email: data.email }));
-        if (rol === 'Administrador') localStorage.setItem('zoar360_admin', 'true');
-
         configurarInterfazPostLogin(data.email);
-
     } catch (err) {
-        mostrarNotificacion('Error de conexión con el servidor.', 'error');
+        mostrarNotificacion('Error de red: El servidor Flask de desarrollo está apagado.', 'error');
     }
 }
 
 function configurarInterfazPostLogin(emailUsuario) {
-    const pantallaLogin = $('pantallaLogin');
-    const appPrincipal = $('appPrincipal');
-    if (pantallaLogin) pantallaLogin.style.display = 'none';
-    if (appPrincipal) appPrincipal.style.display = 'block';
+    $('pantallaLogin').style.display = 'none';
+    $('appPrincipal').style.display = 'block';
 
     const fecha = new Date().toLocaleDateString('es-ES', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
-    const fechaHeader = $('fechaHeader');
-    if (fechaHeader) fechaHeader.textContent = fecha;
+    $('fechaHeader').textContent = fecha;
 
     const info = MAPA_ROLES[rol] || { ministerio: 'General', rol: rol };
+    // Eliminación estricta de guiones bajos en nombres de roles traídos de la base de datos
+    const rolFormateado = info.rol.replace(/_/g, ' ');
+    const ministerioFormateado = info.ministerio.replace(/_/g, ' ');
 
-    const nombreUsuarioHeader = $('nombreUsuarioHeader');
-    const rolUsuarioDropdown = $('rolUsuarioDropdown');
-    const ministerioUsuarioDropdown = $('ministerioUsuarioDropdown');
-    const correoUsuarioDropdown = $('correoUsuarioDropdown');
-
-    if (nombreUsuarioHeader) nombreUsuarioHeader.textContent = info.rol;
-    if (rolUsuarioDropdown) rolUsuarioDropdown.textContent = info.rol;
-    if (ministerioUsuarioDropdown) ministerioUsuarioDropdown.textContent = info.ministerio;
-    if (correoUsuarioDropdown) correoUsuarioDropdown.textContent = emailUsuario;
+    $('nombreUsuarioHeader').textContent = rolFormateado;
+    $('rolUsuarioDropdown').textContent = rolFormateado;
+    $('ministerioUsuarioDropdown').textContent = ministerioFormateado;
+    $('correoUsuarioDropdown').textContent = emailUsuario;
 
     const esAdminPastor = (rol === 'Administrador' || rol === 'Pastor');
     const esSecretarioGeneral = (rol === 'Secretario_General');
     const esSecretarioGrupo = (rol.startsWith('Secretario_') || rol.startsWith('Secretaria_')) && rol !== 'Secretario_General';
 
     document.querySelectorAll('.sidebar .tab-btn').forEach(b => b.style.display = 'flex');
-
-    if ($('btnSolicitudes')) $('btnSolicitudes').style.display = esAdminPastor ? 'flex' : 'none';
-    if ($('btnFinanzas')) $('btnFinanzas').style.display = (esAdminPastor || esSecretarioGeneral) ? 'flex' : 'none';
-    if ($('btnEventos')) $('btnEventos').style.display = esAdminPastor ? 'flex' : 'none';
-    if ($('btnPrivilegios')) $('btnPrivilegios').style.display = esAdminPastor ? 'flex' : 'none';
-    if ($('btnAuditoria')) $('btnAuditoria').style.display = esAdminPastor ? 'flex' : 'none';
-    if ($('btnSantaCena')) $('btnSantaCena').style.display = (esAdminPastor || esSecretarioGeneral) ? 'flex' : 'none';
+    $('btnSolicitudes').style.display = esAdminPastor ? 'flex' : 'none';
+    $('btnFinanzas').style.display = (esAdminPastor || esSecretarioGeneral) ? 'flex' : 'none';
+    $('btnAuditoria').style.display = esAdminPastor ? 'flex' : 'none';
+    $('btnSantaCena').style.display = (esAdminPastor || esSecretarioGeneral) ? 'flex' : 'none';
 
     if (esSecretarioGrupo) {
-        if ($('btnMembresia')) $('btnMembresia').style.display = 'none';
-        if ($('btnSantaCena')) $('btnSantaCena').style.display = 'none';
-        if ($('btnEliminarAdmin')) $('btnEliminarAdmin').style.display = 'none';
-        if ($('btnActualizarAdmin')) $('btnActualizarAdmin').style.display = 'none';
-        if ($('btnAuditoria')) $('btnAuditoria').style.display = 'none';
-        if ($('btnSolicitudes')) $('btnSolicitudes').style.display = 'none';
-        if ($('btnFinanzas')) $('btnFinanzas').style.display = 'none';
-        if ($('btnEventos')) $('btnEventos').style.display = 'none';
-        if ($('btnPrivilegios')) $('btnPrivilegios').style.display = 'none';
+        $('btnMembresia').style.display = 'none';
+        $('btnSantaCena').style.display = 'none';
+        $('btnEliminarAdmin').style.display = 'none';
+        $('btnActualizarAdmin').style.display = 'none';
+        $('btnAuditoria').style.display = 'none';
+        $('btnSolicitudes').style.display = 'none';
+        $('btnFinanzas').style.display = 'none';
+        $('btnEventos').style.display = 'none';
+        $('btnPrivilegios').style.display = 'none';
         cambiarPestaña('asistencia');
     } else {
-        if ($('btnEliminarAdmin')) $('btnEliminarAdmin').style.display = 'inline-flex';
-        if ($('btnActualizarAdmin')) $('btnActualizarAdmin').style.display = 'inline-flex';
+        $('btnEliminarAdmin').style.display = 'inline-flex';
+        $('btnActualizarAdmin').style.display = 'inline-flex';
         cambiarPestaña('membresia');
     }
-    document.body.classList.remove('sidebar-abierto');
+    // Crear botón para mostrar/ocultar liderazgo solo para Pastor y Administrador
+    const existing = $('btnToggleLiderazgo');
+    if (esAdminPastor) {
+        if (!existing) {
+            const btn = document.createElement('button');
+            btn.id = 'btnToggleLiderazgo';
+            btn.className = 'tab-btn';
+            btn.style.marginLeft = '8px';
+            btn.textContent = 'Mostrar Liderazgo';
+            btn.addEventListener('click', () => {
+                mostrarLiderazgo = !mostrarLiderazgo;
+                btn.textContent = mostrarLiderazgo ? 'Ocultar Liderazgo' : 'Mostrar Liderazgo';
+                // Refrescar vistas donde aparece liderazgo
+                if (document.querySelector('#membresia').classList.contains('active')) cargarMiembros();
+                if (document.querySelector('#asistencia').classList.contains('active')) cargarAsistencia();
+                if (document.querySelector('#santacena').classList.contains('active')) cargarSantaCena();
+            });
+            const target = $('grupoActual');
+            if (target && target.parentNode) target.parentNode.insertBefore(btn, target.nextSibling);
+        } else {
+            existing.style.display = 'inline-flex';
+        }
+    } else if (existing) {
+        existing.style.display = 'none';
+    }
 }
 
 function iniciarTemporizadorLogin(segundos) {
     const btnLogin = document.querySelector('#formLogin .btn-submit');
-    if (!btnLogin) return;
     btnLogin.disabled = true;
-    btnLogin.textContent = `Espera ${segundos}s`;
-
     let tiempoRestante = segundos;
     temporizadorLogin = setInterval(() => {
         tiempoRestante--;
@@ -718,52 +226,44 @@ function iniciarTemporizadorLogin(segundos) {
     }, 1000);
 }
 
-// ==================== SEGURIDAD Y CIERRE DE SESIÓN ====================
+// ==================== SEGURIDAD POR DESENFOQUE RE-ACTIVADA (EXCEPTO ADMIN) ====================
 window.addEventListener('beforeunload', () => {
     if (rol && rol !== 'Administrador') sessionStorage.removeItem('zoar360_user');
 });
+
 document.addEventListener('visibilitychange', () => {
     if (document.hidden && rol && rol !== 'Administrador') {
         sessionStorage.removeItem('zoar360_user');
         window.location.reload();
     }
 });
-function cerrarSesion() {
-    sessionStorage.clear();
-    if (rol !== 'Administrador') localStorage.clear();
-    window.location.reload();
-}
-// ==================== FORMULARIO DINÁMICO (Liderazgo) ====================
+
+function cerrarSesion() { sessionStorage.clear(); localStorage.clear(); window.location.reload(); }
+
 function toggleLiderazgoPorTipo() {
     const tipo = $('m_tipo').value;
-    const divLiderazgoPregunta = $('div_liderazgo_pregunta');
-    const divLiderazgoTexto = $('div_liderazgo_texto');
     if (tipo === 'Propiedad') {
-        if (divLiderazgoPregunta) divLiderazgoPregunta.style.display = 'block';
-        const selectSiNo = $('m_liderazgo_si');
-        if (selectSiNo) selectSiNo.value = 'No';
-        if (divLiderazgoTexto) divLiderazgoTexto.style.display = 'none';
+        $('div_liderazgo_pregunta').style.display = 'block';
+        $('m_liderazgo_si').value = 'No';
     } else {
-        if (divLiderazgoPregunta) divLiderazgoPregunta.style.display = 'none';
-        if (divLiderazgoTexto) divLiderazgoTexto.style.display = 'none';
+        $('div_liderazgo_pregunta').style.display = 'none';
+        $('div_liderazgo_texto').style.display = 'none';
     }
 }
+
 function toggleLiderazgoSiNo() {
-    const val = $('m_liderazgo_si').value;
-    const divTexto = $('div_liderazgo_texto');
-    if (divTexto) divTexto.style.display = val === 'Si' ? 'block' : 'none';
+    $('div_liderazgo_texto').style.display = $('m_liderazgo_si').value === 'Si' ? 'block' : 'none';
 }
-// ==================== GUARDAR MIEMBRO / SOLICITUD ====================
+
 async function guardarMiembro(e) {
     if (e) e.preventDefault();
     const nombre = $('m_nombre').value.trim();
     const tipo = $('m_tipo').value;
-    if (!nombre) return mostrarNotificacion('El nombre no puede estar vacío.', 'error');
+    if (!nombre) return mostrarNotificacion('El nombre no puede ir vacío.', 'error');
+    if (!tipo) return mostrarNotificacion('Debes seleccionar un tipo.', 'error');
     let liderazgoTexto = null;
     if (tipo === 'Propiedad') {
-        const esLiderazgo = $('m_liderazgo_si').value === 'Si';
-        liderazgoTexto = esLiderazgo ? $('m_liderazgo_texto').value.trim() : null;
-        if (esLiderazgo && !liderazgoTexto) return mostrarNotificacion('Si marca Sí, debe especificar el liderazgo.', 'error');
+        liderazgoTexto = ($('m_liderazgo_si').value === 'Si') ? $('m_liderazgo_texto').value.trim() : null;
     }
     let grupos = [];
     if ($('g_femenil') && $('g_femenil').checked) grupos.push('Concilio Misionero Femenil');
@@ -771,446 +271,239 @@ async function guardarMiembro(e) {
     if ($('g_varones') && $('g_varones').checked) grupos.push('Fraternidad de Varones');
     if ($('g_exploradores') && $('g_exploradores').checked) grupos.push('Exploradores del Rey');
     if ($('g_embajadores') && $('g_embajadores').checked) grupos.push('Embajadores de Cristo');
-    const datos = {
-        nombre: nombre,
-        telefono: $('m_telefono').value.trim() || null,
-        tipo: tipo,
-        grupo: grupos.join(', ') || 'Culto General',
-        liderazgo: liderazgoTexto
-    };
+    const grupo = grupos.length > 0 ? grupos.join(', ') : 'Culto General';
+    const datos = { nombre, telefono: $('m_telefono').value.trim() || null, tipo, grupo, liderazgo: liderazgoTexto };
     const esAdminPastor = (rol === 'Administrador' || rol === 'Pastor');
-    const url = esAdminPastor ? `${API}/api/miembros` : `${API}/api/solicitudes`;
     try {
+        const url = esAdminPastor ? `${API}/api/miembros` : `${API}/api/solicitudes`;
+        console.log('Enviando solicitud a:', url, datos);
         const res = await fetch(url, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(datos),
-            credentials: 'include'
+            method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(datos), credentials: 'include'
         });
         if (res.ok) {
-            mostrarNotificacion(esAdminPastor ? 'Miembro registrado con éxito.' : 'Solicitud enviada exitosamente al Pastor.', 'exito');
+            mostrarNotificacion(esAdminPastor ? 'Miembro registrado con éxito.' : 'Solicitud de nuevo hermano enviada al Pastor.', 'exito');
             cerrarModalYLimpiar('modalMiembro');
             if (esAdminPastor) cargarMiembros();
         } else {
-            const err = await res.json();
-            mostrarNotificacion(err.error || 'Error al guardar.', 'error');
+            let msg = 'Error al registrar.';
+            try {
+                const ct = res.headers.get('content-type') || '';
+                if (ct.includes('application/json')) {
+                    const j = await res.json();
+                    msg = j.message || j.error || JSON.stringify(j);
+                } else {
+                    msg = await res.text();
+                }
+            } catch (e) { console.error('Error leyendo respuesta del servidor', e); }
+            console.error('Registrar miembro falló:', res.status, msg);
+            mostrarNotificacion(msg || 'Error de servidor.', 'error');
         }
-    } catch (err) {
-        mostrarNotificacion('Error de red al intentar guardar.', 'error');
-    }
+    } catch (err) { console.error('Error en guardarMiembro:', err, 'API=', API); mostrarNotificacion('Error de red local o CORS. Verifica que: 1) El servidor esté ejecutándose, 2) La URL del API sea correcta (' + API + '), 3) El servidor permita CORS.', 'error'); }
 }
-// ==================== CARGAR MIEMBROS (LISTA) ====================
+
 async function cargarMiembros() {
-    try {
-        const res = await fetch(`${API}/api/miembros`, { credentials: 'include' });
-        const lista = await res.json();
-        const tabla = $('tablaMiembros');
-        if (tabla) {
-            tabla.innerHTML = lista.map(m =>
-                `<tr> <td><strong>${m.codigo}</strong></td> <td>${m.nombre}</td> <td>${m.telefono || '---'}</td> <td><span class="badge badge-propiedad">${m.tipo}</span></td> <td>${m.grupo}</td> </tr>`
-            ).join('');
-        }
-    } catch (e) {
-        console.error("Error al cargar miembros:", e);
-    }
+    const res = await fetch(`${API}/api/miembros`, { credentials: 'include' });
+    const lista = await res.json();
+    $('tablaMiembros').innerHTML = lista.map(m => {
+        const nombreLimpio = formatoNombreSinCargo(m.nombre);
+        const lider = m.liderazgo || '';
+        const liderTd = mostrarLiderazgo ? `<td>${lider}</td>` : '';
+        return `<tr><td><strong>${m.codigo}</strong></td><td>${nombreLimpio}</td><td>${m.telefono || '---'}</td><td><span class="badge badge-propiedad">${m.tipo}</span></td><td>${m.grupo}</td>${liderTd}</tr>`;
+    }).join('');
 }
-// ==================== CARGAR SOLICITUDES ====================
+
 async function cargarSolicitudes() {
-    try {
-        const res = await fetch(`${API}/api/solicitudes`, { credentials: 'include' });
-        const lista = await res.json();
-        const tabla = $('tablaSolicitudes');
-        if (tabla) {
-            tabla.innerHTML = lista.map(s =>
-                `<tr> <td>${s.nombre}</td> <td><span class="badge badge-pendiente" style="background:#fef3c7; color:#b45309; padding: 4px 8px; border-radius: 4px;">${s.estado}</span></td> <td><button class="tab-btn" style="width:auto; padding:5px 10px; font-size:0.8rem; background:#22c55e; color:white; border-radius:4px;" onclick="procesarSolicitud(${s.id}, 'Aprobada')">Aprobar</button></td> </tr>`
-            ).join('');
-        }
-    } catch (e) {
-        console.error("Error al cargar solicitudes:", e);
-    }
+    const res = await fetch(`${API}/api/solicitudes`, { credentials: 'include' });
+    const lista = await res.json();
+    $('tablaSolicitudes').innerHTML = lista.map(s => `<tr><td>${s.nombre}</td><td><span class="badge badge-pendiente" style="background:#fef3c7; color:#b45309; padding:4px 8px; border-radius:4px;">${s.estado}</span></td><td><button class="tab-btn" style="background:#22c55e; color:white; padding:4px 8px; border-radius:4px;" onclick="procesarSolicitud(${s.id}, 'Aprobada')">Aprobar</button></td></tr>`).join('');
 }
+
 async function procesarSolicitud(id, estado) {
-    try {
-        const res = await fetch(`${API}/api/solicitudes/${id}`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ estado: estado }),
-            credentials: 'include'
-        });
-        if (res.ok) {
-            mostrarNotificacion('Solicitud procesada con éxito.', 'exito');
-            cargarSolicitudes();
-            cargarMiembros();
-        }
-    } catch (e) {
-        mostrarNotificacion('Error al procesar la solicitud.', 'error');
-    }
+    await fetch(`${API}/api/solicitudes/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ estado }), credentials: 'include' });
+    mostrarNotificacion('Solicitud aprobada.', 'exito');
+    cargarSolicitudes(); cargarMiembros();
 }
-// ==================== ASISTENCIA CON FILTRO SECTORIAL ====================
+
 async function cargarAsistencia() {
     const ahora = new Date();
     const dias = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
     const dia = dias[ahora.getDay()];
-    const mapa = {
-        'Martes': 'Concilio Misionero Femenil',
-        'Miércoles': 'Misioneritas',
-        'Jueves': 'Fraternidad de Varones',
-        'Viernes': 'Exploradores del Rey',
-        'Sábado': 'Embajadores de Cristo',
-        'Domingo': 'Culto General'
-    };
+    const mapa = { 'Martes': 'Concilio Misionero Femenil', 'Miércoles': 'Misioneritas', 'Jueves': 'Fraternidad de Varones', 'Viernes': 'Exploradores del Rey', 'Sábado': 'Embajadores de Cristo', 'Domingo': 'Culto General' };
     let grupo = mapa[dia] || '';
     const btnRecargar = $('btnRecargarListaAsistencia');
-    const diaActualEl = $('diaActual');
-    const grupoActualEl = $('grupoActual');
-    const tablaAsi = $('tablaAsistencia');
     if (!grupo) {
-        if (diaActualEl) diaActualEl.textContent = dia;
-        if (grupoActualEl) grupoActualEl.textContent = 'Sin culto hoy';
-        if (tablaAsi) tablaAsi.innerHTML = "Hoy lunes no se encuentra programado ningún culto.";
-        if (btnRecargar) { btnRecargar.disabled = true; btnRecargar.style.opacity = '0.5'; }
+        $('diaActual').textContent = dia; $('grupoActual').textContent = 'Sin culto hoy';
+        $('tablaAsistencia').innerHTML = " Hoy lunes no se encuentra programado ningún culto.";
+        if (btnRecargar) btnRecargar.disabled = true;
         return;
-    } else {
-        if (btnRecargar) { btnRecargar.disabled = false; btnRecargar.style.opacity = '1'; }
     }
-    if (diaActualEl) diaActualEl.textContent = dia;
-    if (grupoActualEl) grupoActualEl.textContent = grupo;
-    const esCuentaGrupo = rol.startsWith('Secretario_') || rol.startsWith('Secretaria_');
+    if (btnRecargar) btnRecargar.disabled = false;
+    $('diaActual').textContent = dia;
+    // Si es Administrador, Pastor o Secretario General mostramos todos los miembros
+    const esAdminPastor = (rol === 'Administrador' || rol === 'Pastor');
     const esSecretarioGeneral = (rol === 'Secretario_General');
-    let endpoint = (esCuentaGrupo && !esSecretarioGeneral) ? `${API}/api/asistencia/grupo/${grupo}` : `${API}/api/miembros`;
-    try {
-        const res = await fetch(endpoint, { credentials: 'include' });
-        const lista = await res.json();
-        if (lista.error) {
-            if (tablaAsi) tablaAsi.innerHTML = `<tr><td colspan='5' style='text-align:center; color:#ef4444;'>${lista.error}</td></tr>`;
-            return;
-        }
-        if (tablaAsi) {
-            tablaAsi.innerHTML = lista.map(m =>
-                `<tr> <td><strong>${m.codigo}</strong></td> <td>${m.nombre}</td> <td>${m.grupo}</td> <td><input type="checkbox" class="asistencia-check" data-codigo="${m.codigo}" style="width:20px; height:20px;" /></td> <td><strong>${m.total_asistencias || 0}</strong></td> </tr>`
-            ).join('');
-        }
-    } catch (e) {
-        if (tablaAsi) tablaAsi.innerHTML = "Error al conectar con el servidor.";
+    let miembros = [];
+    if (esAdminPastor || esSecretarioGeneral) {
+        const res = await fetch(`${API}/api/miembros`, { credentials: 'include' });
+        miembros = await res.json();
+        $('grupoActual').textContent = grupo;
+    } else {
+        // Usuarios de ministerio obtienen únicamente los miembros de su ministerio
+        const res = await fetch(`${API}/api/miembros/ministerio`, { credentials: 'include' });
+        const data = await res.json();
+        miembros = data.miembros || [];
+        $('grupoActual').textContent = data.grupo || grupo;
     }
+    $('tablaAsistencia').innerHTML = miembros.map((m, i) => {
+        const nombreLimpio = formatoNombreSinCargo(m.nombre);
+        const lider = m.liderazgo || '';
+        const liderTd = mostrarLiderazgo ? `<td>${lider}</td>` : '';
+        // Mostrar sólo el correlativo en la primera columna; el código original se mantiene solo en data-codigo
+        return `<tr><td>${i + 1}</td><td>${nombreLimpio}</td><td>${m.grupo}</td><td><input type="checkbox" class="asistencia-check" data-codigo="${m.codigo}" style="width:20px; height:20px;" /></td><td><strong>${m.total_asistencias || 0}</strong></td>${liderTd}</tr>`;
+    }).join('');
 }
+
 async function guardarAsistencia() {
     const checks = document.querySelectorAll('.asistencia-check:checked');
     if (!checks.length) return mostrarNotificacion('Advertencia: Selecciona al menos un miembro para guardar la lista.', 'error');
-    const listaCodigos = Array.from(checks).map(check => check.dataset.codigo);
+    const listaCodigos = Array.from(checks).map(c => c.dataset.codigo);
     try {
-        const res = await fetch(`${API}/api/marcar-asistencia`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ codigos: listaCodigos }),
-            credentials: 'include'
-        });
+        const res = await fetch(`${API}/api/marcar-asistencia`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ codigos: listaCodigos }), credentials: 'include' });
         const data = await res.json();
         if (!res.ok) {
-            return mostrarNotificacion(data.error || 'Error al guardar asistencia.', 'error');
+            mostrarNotificacion(data.error, 'error');
+            // DESSELECCIÓN AUTOMÁTICA OBLIGATORIA SI EL HORARIO/DÍA RECHAZA EL ENVÍO
+            document.querySelectorAll('.asistencia-check').forEach(c => c.checked = false);
+            return;
         }
-        mostrarNotificacion('✅ Asistencias guardadas exitosamente en el servidor.', 'exito');
+        mostrarNotificacion('Asistencias guardadas exitosamente.', 'exito');
         cargarAsistencia();
     } catch (e) {
-        mostrarNotificacion('Error de red al guardar asistencia.', 'error');
+        mostrarNotificacion('Error de red local al guardar asistencia.', 'error');
+        document.querySelectorAll('.asistencia-check').forEach(c => c.checked = false);
     }
 }
-// ==================== SANTA CENA (CRONÓMETRO) ====================
-let intervaloActual = null;
+
 function iniciarCronometroSantaCena() {
     if (intervaloActual) clearInterval(intervaloActual);
     cargarSantaCena();
     intervaloActual = setInterval(() => {
         const hoy = new Date();
-        let año = hoy.getFullYear();
-        let mes = hoy.getMonth();
+        let año = hoy.getFullYear(), mes = hoy.getMonth();
         let primerDiaMes = new Date(año, mes, 1);
         let primerDomingo = 1 + ((7 - primerDiaMes.getDay()) % 7);
         let fechaSantaCena = new Date(año, mes, primerDomingo);
-        if (hoy > fechaSantaCena.setHours(23, 59, 59, 999)) {
-            mes++;
-            if (mes > 11) { mes = 0; año++; }
-            primerDiaMes = new Date(año, mes, 1);
-            primerDomingo = 1 + ((7 - primerDiaMes.getDay()) % 7);
-            fechaSantaCena = new Date(año, mes, primerDomingo);
-        }
+        if (hoy > fechaSantaCena.setHours(23, 59, 59, 999)) { mes++; if (mes > 11) { mes = 0; año++; } primerDiaMes = new Date(año, mes, 1); primerDomingo = 1 + ((7 - primerDiaMes.getDay()) % 7); fechaSantaCena = new Date(año, mes, primerDomingo); }
         const diferencia = fechaSantaCena - hoy;
-        const cronoEl = $('cronometroSantaCena');
-        if (!cronoEl) return;
-        if (diferencia <= 0) {
-            cronoEl.innerHTML = `<span style="color:#22c55e; font-weight:bold;">¡Hoy es el día de la Santa Cena!</span>`;
-            return;
-        }
-        const dias = Math.floor(diferencia / (1000 * 60 * 60 * 24));
-        const horas = Math.floor((diferencia % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-        const minutos = Math.floor((diferencia % (1000 * 60 * 60)) / (1000 * 60));
-        const segundos = Math.floor((diferencia % (1000 * 60)) / 1000);
-        cronoEl.textContent = `${dias} días, ${horas} h, ${minutos} m, ${segundos} s`;
+        if (diferencia <= 0) { $('cronometroSantaCena').innerHTML = " ¡Hoy es el día de la Santa Cena!"; return; }
+        const d = Math.floor(diferencia / 86400000), h = Math.floor((diferencia % 86400000) / 3600000), m = Math.floor((diferencia % 3600000) / 60000), s = Math.floor((diferencia % 60000) / 1000);
+        $('cronometroSantaCena').innerHTML = `<i class="fa-solid fa-hourglass-half"></i> ${d} días, ${h} h, ${m} m, ${s} s`;
     }, 1000);
 }
+
 async function cargarSantaCena() {
-    try {
-        const res = await fetch(`${API}/api/miembros`, { credentials: 'include' });
-        const lista = await res.json();
-        const filtrados = lista.filter(m => m.tipo === 'Propiedad');
-        const tablaSC = $('tablaSantaCena');
-        if (tablaSC) {
-            tablaSC.innerHTML = filtrados.map(m =>
-                `<tr><td><strong>${m.codigo}</strong></td><td>${m.nombre}</td><td><input type="checkbox" class="sc-check" data-id="${m.id}" style="width:20px; height:20px;" /></td></tr>`
-            ).join('');
-        }
-    } catch (e) {
-        console.error("Error al cargar Santa Cena:", e);
-    }
+    const res = await fetch(`${API}/api/miembros`, { credentials: 'include' });
+    const lista = await res.json();
+    $('tablaSantaCena').innerHTML = lista.filter(m => m.tipo === 'Propiedad').map(m => {
+        const nombreLimpio = formatoNombreSinCargo(m.nombre);
+        const liderTd = mostrarLiderazgo ? `<td>${m.liderazgo || ''}</td>` : '';
+        return `<tr><td><strong>${m.codigo}</strong></td><td>${nombreLimpio}</td><td><input type="checkbox" class="sc-check" data-id="${m.id}" /></td>${liderTd}</tr>`;
+    }).join('');
 }
+
 async function guardarSantaCena() {
     const ahora = new Date();
     if (ahora.getDay() !== 0) return mostrarNotificacion('La Santa Cena solo se registra los Domingos.', 'error');
-    const fecha = ahora.toISOString().split('T')[0];
     const checks = document.querySelectorAll('.sc-check:checked');
-    if (!checks.length) return mostrarNotificacion('No hay asistentes seleccionados.', 'error');
-    try {
-        for (const check of checks) {
-            await fetch(`${API}/api/santacena`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ miembro_id: parseInt(check.dataset.id), fecha: fecha, asistio: true }),
-                credentials: 'include'
-            });
-        }
-        mostrarNotificacion('✅ Registro de Santa Cena guardado con éxito.', 'exito');
-    } catch (e) {
-        mostrarNotificacion('Error de red al guardar registro de Santa Cena.', 'error');
+    for (const check of checks) {
+        await fetch(`${API}/api/santacena`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ miembro_id: parseInt(check.dataset.id), fecha: ahora.toISOString().split('T')[0], asistio: true }), credentials: 'include' });
     }
+    mostrarNotificacion('Registro de Santa Cena guardado.', 'exito');
 }
-// ==================== ELIMINAR MIEMBRO ====================
-async function abrirModalEliminar() {
-    const inpCod = $('inputEliminarCodigo');
-    const txtConf = $('textoConfirmacionEliminar');
-    if (inpCod) inpCod.value = '';
-    if (txtConf) txtConf.innerHTML = '';
-    const modalDel = $('modalEliminar');
-    if (modalDel) modalDel.classList.add('activo');
-}
+
 async function buscarYEliminar() {
     const codigo = $('inputEliminarCodigo').value.trim();
-    if (!codigo) return mostrarNotificacion('Ingresa un código.', 'error');
-    try {
-        const res = await fetch(`${API}/api/miembros/${codigo}`, { credentials: 'include' });
-        if (res.status === 404) return mostrarNotificacion('El código ingresado no pertenece a ningún miembro.', 'error');
-        const data = await res.json();
-        if (!confirm(`¿Estás seguro que quieres eliminar al hermano ${data.nombre} (Código ${codigo})?`)) return;
-        const delRes = await fetch(`${API}/api/miembros/${codigo}`, { method: 'DELETE', credentials: 'include' });
-        if (delRes.ok) {
-            mostrarNotificacion('Miembro eliminado y códigos reordenados con éxito.', 'exito');
-            cerrarModalYLimpiar('modalEliminar');
-            cargarMiembros();
-        } else {
-            const err = await delRes.json();
-            mostrarNotificacion(err.error || 'Error al eliminar miembro.', 'error');
-        }
-    } catch (e) {
-        mostrarNotificacion('Error de red al intentar eliminar miembro.', 'error');
-    }
+    const res = await fetch(`${API}/api/miembros/${codigo}`, { credentials: 'include' });
+    if (res.status === 404) return mostrarNotificacion('El código ingresado no pertenece a ningún miembro.', 'error');
+    const data = await res.json();
+    if (!confirm(`¿Eliminar al hermano ${data.nombre}?`)) return;
+    const delRes = await fetch(`${API}/api/miembros/${codigo}`, { method: 'DELETE', credentials: 'include' });
+    if (delRes.ok) { mostrarNotificacion('Miembro eliminado y códigos reordenados.', 'exito'); cerrarModalYLimpiar('modalEliminar'); cargarMiembros(); }
 }
-// ==================== ACTUALIZAR MIEMBRO ====================
+
 async function abrirModalActualizar() {
-    const inpActCod = $('inputActualizarCodigo');
-    const formAct = $('formActualizarModal');
-    const btnBusc = $('btnBuscarActualizar');
-    const btnGuar = $('btnGuardarActualizar');
-    const modalAct = $('modalActualizar');
-    if (inpActCod) inpActCod.value = '';
-    if (formAct) formAct.style.display = 'none';
-    if (inpActCod) inpActCod.style.display = 'block';
-    if (btnBusc) btnBusc.style.display = 'inline-block';
-    if (btnGuar) btnGuar.style.display = 'none';
-    if (modalAct) modalAct.classList.add('activo');
+    // Reset visual y valores del modal de actualización para evitar estados residuales
+    $('inputActualizarCodigo').value = '';
+    $('m_actualizar_nombre').value = '';
+    $('m_actualizar_telefono').value = '';
+    $('m_actualizar_tipo').value = '';
+    $('m_actualizar_grupo').value = '';
+    if ($('m_actualizar_liderazgo_si')) $('m_actualizar_liderazgo_si').value = 'No';
+    if ($('m_actualizar_liderazgo_texto')) $('m_actualizar_liderazgo_texto').value = '';
+    // Ocultar form y mostrar el input de búsqueda por código
+    $('formActualizarModal').style.display = 'none';
+    $('inputActualizarCodigo').style.display = 'block';
+    $('btnBuscarActualizar').style.display = 'inline-block';
+    $('btnGuardarActualizar').style.display = 'none';
+    $('div_actualizar_liderazgo_pregunta').style.display = 'none';
+    $('div_actualizar_liderazgo_texto').style.display = 'none';
+    $('modalActualizar').classList.add('activo');
 }
+
 async function buscarParaActualizar() {
     const codigo = $('inputActualizarCodigo').value.trim();
-    if (!codigo) return mostrarNotificacion('Ingresa un código.', 'error');
-    try {
-        const res = await fetch(`${API}/api/miembros/${codigo}`, { credentials: 'include' });
-        if (res.status === 404) return mostrarNotificacion('El código ingresado no pertenece a ningún miembro.', 'error');
-        const data = await res.json();
-        const inpActCod = $('inputActualizarCodigo');
-        const btnBusc = $('btnBuscarActualizar');
-        const btnGuar = $('btnGuardarActualizar');
-        const formAct = $('formActualizarModal');
-        if (inpActCod) inpActCod.style.display = 'none';
-        if (btnBusc) btnBusc.style.display = 'none';
-        if (btnGuar) btnGuar.style.display = 'inline-block';
-        if (formAct) formAct.style.display = 'block';
-        if ($('m_actualizar_nombre')) $('m_actualizar_nombre').value = data.nombre.replace(/ \(.*\)/, '');
-        if ($('m_actualizar_telefono')) $('m_actualizar_telefono').value = data.telefono || '';
-        if ($('m_actualizar_tipo')) $('m_actualizar_tipo').value = data.tipo;
-        if ($('m_actualizar_grupo')) $('m_actualizar_grupo').value = data.grupo;
-        const divLiderazgoPregunta = $('div_actualizar_liderazgo_pregunta');
-        const divLiderazgoTexto = $('div_actualizar_liderazgo_texto');
-        if (data.tipo === 'Propiedad') {
-            if (divLiderazgoPregunta) divLiderazgoPregunta.style.display = 'block';
-            const match = data.nombre.match(/\((.*)\)/);
-            if (match && match[1]) {
-                if ($('m_actualizar_liderazgo_si')) $('m_actualizar_liderazgo_si').value = 'Si';
-                if ($('m_actualizar_liderazgo_texto')) $('m_actualizar_liderazgo_texto').value = match[1];
-                if (divLiderazgoTexto) divLiderazgoTexto.style.display = 'block';
-            } else {
-                if ($('m_actualizar_liderazgo_si')) $('m_actualizar_liderazgo_si').value = 'No';
-                if ($('m_actualizar_liderazgo_texto')) $('m_actualizar_liderazgo_texto').value = '';
-                if (divLiderazgoTexto) divLiderazgoTexto.style.display = 'none';
-            }
-        } else {
-            if (divLiderazgoPregunta) divLiderazgoPregunta.style.display = 'none';
-            if (divLiderazgoTexto) divLiderazgoTexto.style.display = 'none';
-        }
-    } catch (e) {
-        mostrarNotificacion('Error al consultar datos del miembro.', 'error');
-    }
+    const res = await fetch(`${API}/api/miembros/${codigo}`, { credentials: 'include' });
+    if (res.status === 404) return mostrarNotificacion('El código ingresado no pertenece a ningún miembro.', 'error');
+    const data = await res.json();
+    $('inputActualizarCodigo').style.display = 'none'; $('btnBuscarActualizar').style.display = 'none'; $('btnGuardarActualizar').style.display = 'inline-block'; $('formActualizarModal').style.display = 'block';
+    $('m_actualizar_nombre').value = data.nombre.replace(/ \(.*\)/, ''); $('m_actualizar_telefono').value = data.telefono || ''; $('m_actualizar_tipo').value = data.tipo; $('m_actualizar_grupo').value = data.grupo;
+    if (data.tipo === 'Propiedad') {
+        $('div_actualizar_liderazgo_pregunta').style.display = 'block';
+        const match = data.nombre.match(/\((.*)\)/);
+        if (match) { $('m_actualizar_liderazgo_si').value = 'Si'; $('m_actualizar_liderazgo_texto').value = match[1]; $('div_actualizar_liderazgo_texto').style.display = 'block'; }
+    } else { $('div_actualizar_liderazgo_pregunta').style.display = 'none'; $('div_actualizar_liderazgo_texto').style.display = 'none'; }
 }
+
 function handleActualizarTipoCambio() {
-    const tipo = $('m_actualizar_tipo').value;
-    const divLiderazgoPregunta = $('div_actualizar_liderazgo_pregunta');
-    const divLiderazgoTexto = $('div_actualizar_liderazgo_texto');
-    if (tipo === 'Propiedad') {
-        if (divLiderazgoPregunta) divLiderazgoPregunta.style.display = 'block';
-        if ($('m_actualizar_liderazgo_si')) $('m_actualizar_liderazgo_si').value = 'No';
-        if (divLiderazgoTexto) divLiderazgoTexto.style.display = 'none';
-    } else {
-        if (divLiderazgoPregunta) divLiderazgoPregunta.style.display = 'none';
-        if (divLiderazgoTexto) divLiderazgoTexto.style.display = 'none';
-    }
+    if ($('m_actualizar_tipo').value === 'Propiedad') { $('div_actualizar_liderazgo_pregunta').style.display = 'block'; }
+    else { $('div_actualizar_liderazgo_pregunta').style.display = 'none'; $('div_actualizar_liderazgo_texto').style.display = 'none'; }
 }
-function toggleActualizarLiderazgo() {
-    const val = $('m_actualizar_liderazgo_si').value;
-    const divLiderazgoTexto = $('div_actualizar_liderazgo_texto');
-    if (divLiderazgoTexto) divLiderazgoTexto.style.display = val === 'Si' ? 'block' : 'none';
-}
+
+function toggleActualizarLiderazgo() { $('div_actualizar_liderazgo_texto').style.display = $('m_actualizar_liderazgo_si').value === 'Si' ? 'block' : 'none'; }
+
 async function guardarActualizacion() {
     const codigo = $('inputActualizarCodigo').value.trim();
-    const tipo = $('m_actualizar_tipo').value;
-    const liderazgoSi = $('m_actualizar_liderazgo_si').value === 'Si';
-    const liderazgoTexto = $('m_actualizar_liderazgo_texto').value.trim();
-    if (tipo === 'Propiedad' && liderazgoSi && !liderazgoTexto) {
-        return mostrarNotificacion('Si marca Sí, debe especificar los cargos de liderazgo.', 'error');
-    }
-    const datos = {
-        nombre: $('m_actualizar_nombre').value.trim(),
-        telefono: $('m_actualizar_telefono').value.trim() || null,
-        tipo: tipo,
-        grupo: $('m_actualizar_grupo').value,
-        liderazgo: (tipo === 'Propiedad' && liderazgoSi) ? liderazgoTexto : null
-    };
-    if (!datos.nombre) return mostrarNotificacion('El nombre es obligatorio y no puede ir vacío.', 'error');
-    try {
-        const res = await fetch(`${API}/api/miembros/${codigo}`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(datos),
-            credentials: 'include'
-        });
-        if (res.ok) {
-            mostrarNotificacion('Información del miembro actualizada con éxito.', 'exito');
-            cerrarModalYLimpiar('modalActualizar');
-            cargarMiembros();
-        } else {
-            const err = await res.json();
-            mostrarNotificacion(err.error || 'Error al guardar los cambios.', 'error');
-        }
-    } catch (e) {
-        mostrarNotificacion('Error de red al intentar actualizar la información.', 'error');
-    }
+    const datos = { nombre: $('m_actualizar_nombre').value.trim(), telefono: $('m_actualizar_telefono').value.trim() || null, tipo: $('m_actualizar_tipo').value, grupo: $('m_actualizar_grupo').value, liderazgo: ($('m_actualizar_liderazgo_si').value === 'Si') ? $('m_actualizar_liderazgo_texto').value.trim() : null };
+    await fetch(`${API}/api/miembros/${codigo}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(datos), credentials: 'include' });
+    mostrarNotificacion('Información actualizada.', 'exito'); cerrarModalYLimpiar('modalActualizar'); cargarMiembros();
 }
-// ==================== AUDITORÍA (HISTORIAL EXPANDIBLE) ====================
+
 async function cargarAuditoria() {
-    try {
-        const res = await fetch(`${API}/api/auditoria`, { credentials: 'include' });
-        const lista = await res.json();
-        let html = "";
-        lista.forEach(n => {
-            const fecha = new Date(n.fecha_hora);
-            const fechaStr = fecha.toLocaleDateString('es-ES');
-            const horaStr = fecha.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
-            const accionLimpia = n.accion.replace(/'/g, "\'");
-            const detallesLimpios = (n.detalles || 'Sin detalles adicionales registrados.').replace(/'/g, "\'").replace(/\n/g, " ");
-            const correoLimpio = n.usuario_correo.replace(/'/g, "\'");
-            html += `<tr onclick="mostrarDetalleAuditoria('${accionLimpia}', '${detallesLimpios}', '${correoLimpio}', '${fechaStr} ${horaStr}')" style="cursor:pointer;"> <td><strong>${fechaStr} ${horaStr}</strong></td> <td>${n.usuario_correo}</td> <td><span style="color:#0c4d8e; font-weight:500;">${n.accion}</span></td> </tr>`;
-        });
-        const tablaAud = $('tablaAuditoria');
-        if (tablaAud) tablaAud.innerHTML = html || "No se ha registrado actividad en el historial.";
-    } catch (e) {
-        if ($('tablaAuditoria')) $('tablaAuditoria').innerHTML = "Error al cargar los registros de auditoría.";
-    }
+    const res = await fetch(`${API}/api/auditoria`, { credentials: 'include' });
+    const lista = await res.json();
+    $('tablaAuditoria').innerHTML = lista.map(n => `<tr onclick="mostrarDetalleAuditoria('${n.accion}', '${n.detalles}', '${n.usuario_correo}', '${n.fecha_hora}')" style="cursor:pointer;"><td>${n.fecha_hora}</td><td>${n.usuario_correo}</td><td><span style='color:#0c4d8e;'>${n.accion}</span></td></tr>`).join('');
 }
+
 function mostrarDetalleAuditoria(accion, detalles, usuario, fecha) {
-    const cuerpoDetalle = `<div style="text-align:left; line-height:1.6; font-size:0.95rem;"> <p><strong>📅 Fecha y Hora:</strong> ${fecha}</p> <p><strong>📧 Usuario Operador:</strong> ${usuario}</p> <p><strong>⚡ Acción Realizada:</strong> ${accion}</p> <hr style="border:0; border-top:1px solid #e2e8f0; margin:12px 0;" /> <p><strong>📋 Detalles Técnicos de la Operación:</strong></p> <div style="background:#f8fafc; padding:10px; border-radius:6px; border:1px solid #e2e8f0; font-family:monospace; white-space:pre-wrap; word-break:break-word; max-height:200px; overflow-y:auto;">${detalles}</div> </div>`;
-    mostrarNotificacion(cuerpoDetalle, 'info');
+    mostrarNotificacion(`<div style='text-align:left;'><p><strong><i class="fa-solid fa-calendar"></i> Fecha:</strong> ${fecha}</p><p><strong><i class="fa-solid fa-envelope"></i> Operador:</strong> ${usuario}</p><p><strong><i class="fa-solid fa-bolt"></i> Acción:</strong> ${accion}</p><hr/><p><strong>Detalles:</strong></p><pre style='background:#f1f5f9; padding:8px; border-radius:4px;'>${detalles}</pre></div>`, 'info');
 }
-// ==================== VERIFICAR CLAVE ADMIN (FINANZAS) ====================
+
 async function verificarClaveAdmin() {
-    const clave = $('inputContraAdmin').value;
-    if (!clave) return mostrarNotificacion('Advertencia: Debes ingresar la clave de autorización del Administrador.', 'error');
-    try {
-        const res = await fetch(`${API}/api/verificar-admin`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ password: clave }),
-            credentials: 'include'
-        });
-        if (res.ok) {
-            mostrarNotificacion('✅ Acceso al módulo financiero autorizado.', 'exito');
-            if ($('inputContraAdmin')) $('inputContraAdmin').value = '';
-            const modalClave = $('modalClaveAdmin');
-            if (modalClave) modalClave.classList.remove('activo');
-            cambiarPestaña('finanzas');
-        } else {
-            mostrarNotificacion('Error: Clave incorrecta. Acceso denegado a las finanzas.', 'error');
-        }
-    } catch (e) {
-        mostrarNotificacion('Error de red al intentar verificar la clave de seguridad.', 'error');
-    }
+    const res = await fetch(`${API}/api/verificar-admin`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ password: $('inputContraAdmin').value }), credentials: 'include' });
+    if (res.ok) { mostrarNotificacion('Acceso concedido.', 'exito'); $('inputContraAdmin').value = ''; $('modalClaveAdmin').classList.remove('activo'); cambiarPestaña('finanzas'); }
+    else { mostrarNotificacion('Clave incorrecta.', 'error'); }
 }
-// ==================== LIMPIEZA DE MODALES Y UTILIDADES ====================
+
 function cerrarModalYLimpiar(modalId) {
-    const modal = $(modalId);
-    if (!modal) return;
+    const modal = $(modalId); if (!modal) return;
     modal.classList.remove('activo');
-    modal.querySelectorAll('input, select, textarea').forEach(input => {
-        if (input.type === 'checkbox' || input.type === 'radio') input.checked = false;
-        else if (input.tagName === 'SELECT') input.selectedIndex = 0;
-        else input.value = '';
-    });
-    if (modalId === 'modalMiembro') {
-        if ($('div_liderazgo_pregunta')) $('div_liderazgo_pregunta').style.display = 'none';
-        if ($('div_liderazgo_texto')) $('div_liderazgo_texto').style.display = 'none';
-        const formMieb = $('formMiembroModal');
-        if (formMieb) formMieb.reset();
-    }
-    if (modalId === 'modalEliminar') {
-        const txtConf = $('textoConfirmacionEliminar');
-        if (txtConf) txtConf.innerHTML = '';
-    }
-    if (modalId === 'modalActualizar') {
-        if ($('formActualizarModal')) $('formActualizarModal').style.display = 'none';
-        if ($('inputActualizarCodigo')) $('inputActualizarCodigo').style.display = 'block';
-        if ($('btnBuscarActualizar')) $('btnBuscarActualizar').style.display = 'inline-block';
-        if ($('btnGuardarActualizar')) $('btnGuardarActualizar').style.display = 'none';
-        if ($('div_actualizar_liderazgo_texto')) $('div_actualizar_liderazgo_texto').style.display = 'none';
-        if ($('div_actualizar_liderazgo_pregunta')) $('div_actualizar_liderazgo_pregunta').style.display = 'none';
-    }
+    modal.querySelectorAll('input, select, textarea').forEach(i => { if (i.type === 'checkbox') i.checked = false; else i.value = ''; });
+    if (modalId === 'modalMiembro') { $('div_liderazgo_pregunta').style.display = 'none'; $('div_liderazgo_texto').style.display = 'none'; }
 }
-const abrirModal = id => { const m = $(id); if (m) m.classList.add('activo'); };
-const cerrarModal = id => cerrarModalYLimpiar(id);
-// ==================== TEMA OSCURO Y DROPDOWN ====================
-function toggleDropdown() {
-    const headerUser = $('headerUser');
-    if (headerUser) headerUser.classList.toggle('abierto');
-}
-function cambiarTema() {
-    esModoOscuro = !esModoOscuro;
-    document.body.classList.toggle('modo-oscuro', esModoOscuro);
-    const btnTema = $('btnTema');
-    if (btnTema) {
-        btnTema.innerHTML = esModoOscuro ? '' : '';
-    }
-}
+
+function abrirModal(id) { if ($(id)) $(id).classList.add('activo'); }
+function cerrarModal(id) { cerrarModalYLimpiar(id); }
+
+function toggleDropdown() { $('headerUser').classList.toggle('abierto'); }
+
+function cambiarTema() { esModoOscuro = !esModoOscuro; document.body.classList.toggle('modo-oscuro', esModoOscuro); $('btnTema').innerHTML = esModoOscuro ? '' : ''; }

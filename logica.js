@@ -1,6 +1,12 @@
-const API = window.location.hostname === '127.0.0.1' || window.location.hostname === 'localhost'
-    ? 'http://127.0.0.1:5000'
-    : 'https://zoar360.onrender.com';
+// Soporte para variable de entorno o localStorage para override en desarrollo
+const API = (() => {
+    if (window.location.hostname === '127.0.0.1' || window.location.hostname === 'localhost') {
+        return 'http://127.0.0.1:5000';
+    }
+    const storedAPI = localStorage.getItem('ZOAR360_API_URL');
+    if (storedAPI) return storedAPI;
+    return 'https://zoar360.onrender.com';
+})();
 
 let rol = null;
 let esModoOscuro = false;

@@ -13,7 +13,8 @@ CORS(app, supports_credentials=True, origins=[
     "http://127.0.0.1:3000", "http://localhost:3000",
     "http://127.0.0.1:5500", "http://localhost:5500",
     "http://127.0.0.1:5000", "http://localhost:5000",
-    "https://github.io"
+    "https://github.io",
+    "https://gonzalezaguirre870-ux.github.io"
 ])
 
 app.secret_key = 'clave_super_secreta_para_sesiones_iglesia_zoar'

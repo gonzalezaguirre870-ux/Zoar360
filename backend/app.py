@@ -21,6 +21,7 @@ app.config['SESSION_COOKIE_SECURE'] = True
 # =========================================================
 # CONEXIÓN A SUPABASE
 # =========================================================
+# REEMPLAZA ESTOS VALORES CON LOS QUE COPIASte DE SUPABASE
 SUPABASE_URL = "https://noxdmoxlytpsmkyclpna.supabase.co"
 SUPABASE_KEY = "sb_publishable_wvWGLVcc3TtyAh3YT5Fuvw_Id1M4q4P"
 
@@ -60,8 +61,11 @@ def login():
                 del intentos_fallidos[email]
 
     try:
-        # Consulta a Supabase
-        response = supabase.table('usuarios').select('*').eq('email', email).eq('password_hash', password).execute()
+        # CORRECCIÓN: Limpieza estricta de espacios en la contraseña
+        password_limpia = password.strip()
+
+        # Consulta a Supabase usando password_limpia
+        response = supabase.table('usuarios').select('*').eq('email', email).eq('password_hash', password_limpia).execute()
         
         if response.data and len(response.data) > 0:
             # CONVERTIR A DICCIONARIO ESTÁNDAR DE PYTHON (ELIMINA LOS ERRORES DE VS CODE)
@@ -70,7 +74,7 @@ def login():
             if email in intentos_fallidos: del intentos_fallidos[email]
             
             session.clear()
-            session['user_id'] = user['id']# type: ignore
+            session['user_id'] = user['id'] # type: ignore
             session['user_rol'] = user['rol'] # type: ignore
             session['user_email'] = user['email'] # type: ignore
             return jsonify({"message": "Login exitoso", "rol": user['rol'], "email": user['email']}), 200 # type: ignore

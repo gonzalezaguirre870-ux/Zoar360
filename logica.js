@@ -261,16 +261,19 @@ function toggleLiderazgoSiNo() {
     $('div_liderazgo_texto').style.display = $('m_liderazgo_si').value === 'Si' ? 'block' : 'none';
 }
 
+// ==================== GUARDAR MIEMBRO (CORREGIDO) ====================
 async function guardarMiembro(e) {
     if (e) e.preventDefault();
     const nombre = $('m_nombre').value.trim();
     const tipo = $('m_tipo').value;
     if (!nombre) return mostrarNotificacion('El nombre no puede ir vacío.', 'error');
     if (!tipo) return mostrarNotificacion('Debes seleccionar un tipo.', 'error');
-    let liderazgoTexto = null;
+
+    let liderazgoTexto = "";
     if (tipo === 'Propiedad') {
-        liderazgoTexto = ($('m_liderazgo_si').value === 'Si') ? $('m_liderazgo_texto').value.trim() : null;
+        liderazgoTexto = ($('m_liderazgo_si').value === 'Si') ? $('m_liderazgo_texto').value.trim() : ""; // CORRECCIÓN: Usar "" en lugar de null
     }
+
     let grupos = [];
     if ($('g_femenil') && $('g_femenil').checked) grupos.push('Concilio Misionero Femenil');
     if ($('g_misioneritas') && $('g_misioneritas').checked) grupos.push('Misioneritas');
@@ -278,11 +281,11 @@ async function guardarMiembro(e) {
     if ($('g_exploradores') && $('g_exploradores').checked) grupos.push('Exploradores del Rey');
     if ($('g_embajadores') && $('g_embajadores').checked) grupos.push('Embajadores de Cristo');
     const grupo = grupos.length > 0 ? grupos.join(', ') : 'Culto General';
-    const datos = { nombre, telefono: $('m_telefono').value.trim() || null, tipo, grupo, liderazgo: liderazgoTexto };
+
+    const datos = { nombre, telefono: $('m_telefono').value.trim() || "", tipo, grupo, liderazgo: liderazgoTexto };
     const esAdminPastor = (rol === 'Administrador' || rol === 'Pastor');
     try {
         const url = esAdminPastor ? `${API}/api/miembros` : `${API}/api/solicitudes`;
-        console.log('Enviando solicitud a:', url, datos);
         const res = await fetch(url, {
             method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(datos), credentials: 'include'
         });
@@ -304,9 +307,10 @@ async function guardarMiembro(e) {
             console.error('Registrar miembro falló:', res.status, msg);
             mostrarNotificacion(msg || 'Error de servidor.', 'error');
         }
-    } catch (err) { console.error('Error en guardarMiembro:', err, 'API=', API); mostrarNotificacion('Error de red local o CORS. Verifica que: 1) El servidor esté ejecutándose, 2) La URL del API sea correcta (' + API + '), 3) El servidor permita CORS.', 'error'); }
+    } catch (err) { console.error('Error en guardarMiembro:', err, 'API=', API); mostrarNotificacion('Error de red local o CORS.', 'error'); }
 }
 
+// ==================== RESTO DE FUNCIONES (SIN CAMBIOS) ====================
 async function cargarMiembros() {
     const res = await fetch(`${API}/api/miembros`, { credentials: 'include' });
     const lista = await res.json();
@@ -364,7 +368,6 @@ async function cargarAsistencia() {
         const nombreLimpio = formatoNombreSinCargo(m.nombre);
         const lider = m.liderazgo || '';
         const liderTd = mostrarLiderazgo ? `<td>${lider}</td>` : '';
-        // Mostrar sólo el correlativo en la primera columna; el código original se mantiene solo en data-codigo
         return `<tr><td>${i + 1}</td><td>${nombreLimpio}</td><td>${m.grupo}</td><td><input type="checkbox" class="asistencia-check" data-codigo="${m.codigo}" style="width:20px; height:20px;" /></td><td><strong>${m.total_asistencias || 0}</strong></td>${liderTd}</tr>`;
     }).join('');
 }
@@ -378,7 +381,6 @@ async function guardarAsistencia() {
         const data = await res.json();
         if (!res.ok) {
             mostrarNotificacion(data.error, 'error');
-            // DESSELECCIÓN AUTOMÁTICA OBLIGATORIA SI EL HORARIO/DÍA RECHAZA EL ENVÍO
             document.querySelectorAll('.asistencia-check').forEach(c => c.checked = false);
             return;
         }
@@ -438,7 +440,6 @@ async function buscarYEliminar() {
 }
 
 async function abrirModalActualizar() {
-    // Reset visual y valores del modal de actualización para evitar estados residuales
     $('inputActualizarCodigo').value = '';
     $('m_actualizar_nombre').value = '';
     $('m_actualizar_telefono').value = '';
@@ -446,7 +447,6 @@ async function abrirModalActualizar() {
     $('m_actualizar_grupo').value = '';
     if ($('m_actualizar_liderazgo_si')) $('m_actualizar_liderazgo_si').value = 'No';
     if ($('m_actualizar_liderazgo_texto')) $('m_actualizar_liderazgo_texto').value = '';
-    // Ocultar form y mostrar el input de búsqueda por código
     $('formActualizarModal').style.display = 'none';
     $('inputActualizarCodigo').style.display = 'block';
     $('btnBuscarActualizar').style.display = 'inline-block';

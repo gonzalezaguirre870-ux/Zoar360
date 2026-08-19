@@ -19,13 +19,11 @@ app.config['SESSION_COOKIE_SAMESITE'] = 'None'
 app.config['SESSION_COOKIE_SECURE'] = True
 
 # =========================================================
-# CONEXIÓN A SUPABASE
+# CONEXIÓN A SUPABASE (¡YA CON TUS DATOS REALES!)
 # =========================================================
-# REEMPLAZA ESTOS VALORES CON LOS QUE COPIASte DE SUPABASE
 SUPABASE_URL = "https://noxdmoxlytpsmkyclpna.supabase.co"
 SUPABASE_KEY = "sb_publishable_wvWGLVcc3TtyAh3YT5Fuvw_Id1M4q4P"
 
-# Si no has puesto las claves aún, el servidor fallará al iniciar (es normal por ahora)
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 # =========================================================
@@ -37,7 +35,7 @@ MAPEO_MINISTERIOS = {
     "fraternidad@iglesiazoarsv.org": {"grupo": "Fraternidad de Varones", "dia": 3, "msg": "los jueves de 5:45 PM a 7:00 PM"},
     "exploradores@iglesiazoarsv.org": {"grupo": "Exploradores del Rey", "dia": 4, "msg": "los viernes de 5:45 PM a 7:00 PM"},
     "embajadores@iglesiazoarsv.org": {"grupo": "Embajadores de Cristo", "dia": 5, "msg": "los sábados de 5:45 PM a 7:00 PM"},
-    "secretariageneral@iglesiazoarsv.org": {"grupo": "Culto General", "dia": 6, "msg": "los domingos de 2:45 PM a 4:00 PM"}
+    "secretariageneral@iglesiazoarsv.org": {"grupo": "Culto General", "dia": 6, "msg": "los domingos de 2:45 PM a 7:00 PM"}
 }
 
 # --- DICCIONARIO DE INTENTOS FALLIDOS (MEMORIA LOCAL) ---
@@ -61,23 +59,19 @@ def login():
                 del intentos_fallidos[email]
 
     try:
-        # CORRECCIÓN: Limpieza estricta de espacios en la contraseña
         password_limpia = password.strip()
-
-        # Consulta a Supabase usando password_limpia
-        response = supabase.table('usuarios').select('*').eq('email', email).eq('password_hash', password_limpia).execute()
+        response = supabase.table('usuario').select('*').eq('email', email).eq('password_hash', password_limpia).execute()
         
         if response.data and len(response.data) > 0:
-            # CONVERTIR A DICCIONARIO ESTÁNDAR DE PYTHON (ELIMINA LOS ERRORES DE VS CODE)
             user = dict(response.data[0]) # type: ignore
             
             if email in intentos_fallidos: del intentos_fallidos[email]
             
             session.clear()
-            session['user_id'] = user['id'] # type: ignore
-            session['user_rol'] = user['rol'] # type: ignore
-            session['user_email'] = user['email'] # type: ignore
-            return jsonify({"message": "Login exitoso", "rol": user['rol'], "email": user['email']}), 200 # type: ignore
+            session['user_id'] = user['id']
+            session['user_rol'] = user['rol']
+            session['user_email'] = user['email']
+            return jsonify({"message": "Login exitoso", "rol": user['rol'], "email": user['email']}), 200
         else:
             if email in intentos_fallidos:
                 intentos_fallidos[email][0] += 1
@@ -93,11 +87,11 @@ def login():
     except Exception as e:
         return jsonify({"error": f"Error de base de datos: {str(e)}"}), 500
 
-# ==================== MIEMBROS ====================
+# ==================== MIEMBROS (CORREGIDO: SIN ACENTOS) ====================
 @app.route('/api/miembros', methods=['GET'])
 def obtener_miembros():
     try:
-        response = supabase.table('miembros').select('*').order('código').execute()
+        response = supabase.table('miembros').select('*').order('codigo').execute()
         return jsonify(response.data)
     except Exception as e:
         return jsonify({"error": str(e)}), 500
@@ -107,7 +101,7 @@ def obtener_miembro_por_codigo(codigo):
     try:
         response = supabase.table('miembros').select('*').eq('codigo', codigo).execute()
         if response.data and len(response.data) > 0:
-            return jsonify(dict(response.data[0])) # type: ignore
+            return jsonify(dict(response.data[0]))
         return jsonify({"error": "El código ingresado no pertenece a ningún miembro"}), 404
     except Exception as e:
         return jsonify({"error": str(e)}), 500
@@ -124,13 +118,13 @@ def crear_miembro():
     try:
         # Obtener último código
         last = supabase.table('miembros').select('codigo').order('codigo', desc=True).limit(1).execute()
-        if last.data and len(last.data) > 0 and last.data[0]['codigo']: # type: ignore
-            ultimo_num = int(last.data[0]['codigo']) # type: ignore
+        if last.data and len(last.data) > 0 and last.data[0]['codigo']:
+            ultimo_num = int(last.data[0]['codigo'])
             nuevo_codigo = f"{ultimo_num + 1:04d}"
         else:
             nuevo_codigo = "0001"
 
-        liderazgo = data.get('liderazgo', '').strip() if data.get('tipo') == 'Propiedad' else None
+        liderazgo = data.get('liderazgo', '').strip() if data.get('tipo') == 'Propiedad' else ""
         nombre_final = nombre + (f" ({liderazgo})" if liderazgo else "")
         
         nuevo_miembro = {
@@ -144,7 +138,6 @@ def crear_miembro():
         
         supabase.table('miembros').insert(nuevo_miembro).execute()
         
-        # Auditoría
         supabase.table('notificaciones_sistema').insert({
             "usuario_correo": session.get('user_email'),
             "accion": f"Miembro creado: {nombre}",
@@ -161,21 +154,18 @@ def eliminar_miembro(codigo):
         return jsonify({"error": "Acceso denegado."}), 403
 
     try:
-        # Verificar si existe
         check = supabase.table('miembros').select('*').eq('codigo', codigo).execute()
         if not check.data or len(check.data) == 0:
             return jsonify({"error": "El código ingresado no pertenece a ningún miembro"}), 404
         
-        # Eliminar
         supabase.table('miembros').delete().eq('codigo', codigo).execute()
         
         # Reindexar códigos
         todos = supabase.table('miembros').select('id').order('id').execute()
         for index, row in enumerate(todos.data):
             nuevo_cod = f"{index + 1:04d}"
-            supabase.table('miembros').update({"codigo": nuevo_cod}).eq('id', row['id']).execute() # type: ignore
+            supabase.table('miembros').update({"codigo": nuevo_cod}).eq('id', row['id']).execute()
             
-        # Auditoría
         supabase.table('notificaciones_sistema').insert({
             "usuario_correo": session.get('user_email'),
             "accion": "Miembro eliminado",
@@ -193,9 +183,9 @@ def actualizar_miembro(codigo):
     
     data = request.json or {}
     nombre = data.get('nombre', '').strip()
-
+    
     try:
-        liderazgo = data.get('liderazgo', '').strip() if data.get('tipo') == 'Propiedad' else None
+        liderazgo = data.get('liderazgo', '').strip() if data.get('tipo') == 'Propiedad' else ""
         nombre_final = nombre + (f" ({liderazgo})" if liderazgo else "")
         
         update_data = {
@@ -225,7 +215,7 @@ def crear_solicitud():
     if not nombre: return jsonify({"error": "El nombre es obligatorio."}), 400
 
     try:
-        liderazgo = data.get('liderazgo', '').strip() if data.get('tipo') == 'Propiedad' else None
+        liderazgo = data.get('liderazgo', '').strip() if data.get('tipo') == 'Propiedad' else ""
         nombre_final = nombre + (f" ({liderazgo})" if liderazgo else "")
         email_solicitante = session.get('user_email', 'Secretaría')
         
@@ -274,18 +264,18 @@ def procesar_solicitud(id):
         
         if estado == 'Aprobada':
             last = supabase.table('miembros').select('codigo').order('codigo', desc=True).limit(1).execute()
-            if last.data and len(last.data) > 0 and last.data[0]['codigo']: # type: ignore
-                ultimo_num = int(last.data[0]['codigo']) # type: ignore
+            if last.data and len(last.data) > 0 and last.data[0]['codigo']:
+                ultimo_num = int(last.data[0]['codigo'])
                 nuevo_codigo = f"{ultimo_num + 1:04d}"
             else:
                 nuevo_codigo = "0001"
             
             nuevo_miembro = {
                 "codigo": nuevo_codigo,
-                "nombre": sol.data[0]['nombre'], # type: ignore
-                "telefono": sol.data[0]['telefono'], # type: ignore
-                "tipo": sol.data[0]['tipo'], # type: ignore
-                "grupo": sol.data[0]['grupo'] # type: ignore
+                "nombre": sol.data[0]['nombre'],
+                "telefono": sol.data[0]['telefono'],
+                "tipo": sol.data[0]['tipo'],
+                "grupo": sol.data[0]['grupo']
             }
             supabase.table('miembros').insert(nuevo_miembro).execute()
         
@@ -335,18 +325,16 @@ def marcar_asistencia():
             miembro = supabase.table('miembros').select('*').eq('codigo', codigo).execute()
             if miembro.data and len(miembro.data) > 0:
                 m = miembro.data[0]
-                # Insertar asistencia
                 supabase.table('asistencias').insert({
-                    "miembro_id": m['id'], # type: ignore
+                    "miembro_id": m['id'],
                     "fecha": fecha_hoy,
                     "hora": hora_hoy,
                     "grupo_asistido": config_horaria['grupo'] if config_horaria else 'General'
                 }).execute()
                 
-                # Incrementar contador
-                nuevo_total = (m.get('total_asistencias') or 0) + 1 # type: ignore
-                supabase.table('miembros').update({"total_asistencias": nuevo_total}).eq('id', m['id']).execute() # type: ignore
-                nombres_asistentes.append(m['nombre']) # type: ignore
+                nuevo_total = (m.get('total_asistencias') or 0) + 1
+                supabase.table('miembros').update({"total_asistencias": nuevo_total}).eq('id', m['id']).execute()
+                nombres_asistentes.append(m['nombre'])
         
         if nombres_asistentes:
             supabase.table('notificaciones_sistema').insert({
@@ -365,7 +353,7 @@ def obtener_asistencia_grupo(grupo):
     try:
         grupo_limpio = grupo.replace('_', ' ').strip()
         response = supabase.table('miembros').select('*').order('nombre').execute()
-        filtrados = [m for m in response.data if grupo_limpio in (m.get('grupo') or '')] # type: ignore
+        filtrados = [m for m in response.data if grupo_limpio in (m.get('grupo') or '')]
         return jsonify(filtrados)
     except Exception as e:
         return jsonify({"error": str(e)}), 500
@@ -398,7 +386,7 @@ def verificar_admin():
     data = request.json or {}
     password = data.get('password', '')
     try:
-        response = supabase.table('usuarios').select('*').eq('rol', 'Administrador').eq('password_hash', password).execute()
+        response = supabase.table('usuario').select('*').eq('rol', 'Administrador').eq('password_hash', password).execute()
         if response.data and len(response.data) > 0:
             return jsonify({"message": "Acceso concedido"}), 200
         return jsonify({"error": "Clave de Administrador incorrecta"}), 401

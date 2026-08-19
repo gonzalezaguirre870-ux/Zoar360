@@ -68,10 +68,10 @@ def login():
             if email in intentos_fallidos: del intentos_fallidos[email]
             
             session.clear()
-            session['user_id'] = user['id']
-            session['user_rol'] = user['rol']
-            session['user_email'] = user['email']
-            return jsonify({"message": "Login exitoso", "rol": user['rol'], "email": user['email']}), 200
+            session['user_id'] = user['id'] # pyright: ignore[reportArgumentType]
+            session['user_rol'] = user['rol']  # type: ignore
+            session['user_email'] = user['email'] # type: ignore
+            return jsonify({"message": "Login exitoso", "rol": user['rol'], "email": user['email']}), 200 # type: ignore
         else:
             if email in intentos_fallidos:
                 intentos_fallidos[email][0] += 1
@@ -101,7 +101,7 @@ def obtener_miembro_por_codigo(codigo):
     try:
         response = supabase.table('miembros').select('*').eq('codigo', codigo).execute()
         if response.data and len(response.data) > 0:
-            return jsonify(dict(response.data[0]))
+            return jsonify(dict(response.data[0])) # type: ignore
         return jsonify({"error": "El código ingresado no pertenece a ningún miembro"}), 404
     except Exception as e:
         return jsonify({"error": str(e)}), 500
@@ -118,8 +118,8 @@ def crear_miembro():
     try:
         # Obtener último código
         last = supabase.table('miembros').select('codigo').order('codigo', desc=True).limit(1).execute()
-        if last.data and len(last.data) > 0 and last.data[0]['codigo']:
-            ultimo_num = int(last.data[0]['codigo'])
+        if last.data and len(last.data) > 0 and last.data[0]['codigo']: # type: ignore
+            ultimo_num = int(last.data[0]['codigo']) # type: ignore
             nuevo_codigo = f"{ultimo_num + 1:04d}"
         else:
             nuevo_codigo = "0001"
@@ -164,7 +164,7 @@ def eliminar_miembro(codigo):
         todos = supabase.table('miembros').select('id').order('id').execute()
         for index, row in enumerate(todos.data):
             nuevo_cod = f"{index + 1:04d}"
-            supabase.table('miembros').update({"codigo": nuevo_cod}).eq('id', row['id']).execute()
+            supabase.table('miembros').update({"codigo": nuevo_cod}).eq('id', row['id']).execute() # type: ignore
             
         supabase.table('notificaciones_sistema').insert({
             "usuario_correo": session.get('user_email'),
@@ -264,18 +264,18 @@ def procesar_solicitud(id):
         
         if estado == 'Aprobada':
             last = supabase.table('miembros').select('codigo').order('codigo', desc=True).limit(1).execute()
-            if last.data and len(last.data) > 0 and last.data[0]['codigo']:
-                ultimo_num = int(last.data[0]['codigo'])
+            if last.data and len(last.data) > 0 and last.data[0]['codigo']: # type: ignore
+                ultimo_num = int(last.data[0]['codigo']) # type: ignore
                 nuevo_codigo = f"{ultimo_num + 1:04d}"
             else:
                 nuevo_codigo = "0001"
             
             nuevo_miembro = {
                 "codigo": nuevo_codigo,
-                "nombre": sol.data[0]['nombre'],
-                "telefono": sol.data[0]['telefono'],
-                "tipo": sol.data[0]['tipo'],
-                "grupo": sol.data[0]['grupo']
+                "nombre": sol.data[0]['nombre'], # type: ignore
+                "telefono": sol.data[0]['telefono'], # type: ignore
+                "tipo": sol.data[0]['tipo'], # type: ignore
+                "grupo": sol.data[0]['grupo'] # type: ignore
             }
             supabase.table('miembros').insert(nuevo_miembro).execute()
         
@@ -326,15 +326,15 @@ def marcar_asistencia():
             if miembro.data and len(miembro.data) > 0:
                 m = miembro.data[0]
                 supabase.table('asistencias').insert({
-                    "miembro_id": m['id'],
+                    "miembro_id": m['id'], # type: ignore
                     "fecha": fecha_hoy,
                     "hora": hora_hoy,
                     "grupo_asistido": config_horaria['grupo'] if config_horaria else 'General'
                 }).execute()
                 
-                nuevo_total = (m.get('total_asistencias') or 0) + 1
-                supabase.table('miembros').update({"total_asistencias": nuevo_total}).eq('id', m['id']).execute()
-                nombres_asistentes.append(m['nombre'])
+                nuevo_total = (m.get('total_asistencias') or 0) + 1 # type: ignore
+                supabase.table('miembros').update({"total_asistencias": nuevo_total}).eq('id', m['id']).execute() # type: ignore
+                nombres_asistentes.append(m['nombre']) # type: ignore
         
         if nombres_asistentes:
             supabase.table('notificaciones_sistema').insert({
@@ -353,7 +353,7 @@ def obtener_asistencia_grupo(grupo):
     try:
         grupo_limpio = grupo.replace('_', ' ').strip()
         response = supabase.table('miembros').select('*').order('nombre').execute()
-        filtrados = [m for m in response.data if grupo_limpio in (m.get('grupo') or '')]
+        filtrados = [m for m in response.data if grupo_limpio in (m.get('grupo') or '')] # type: ignore
         return jsonify(filtrados)
     except Exception as e:
         return jsonify({"error": str(e)}), 500

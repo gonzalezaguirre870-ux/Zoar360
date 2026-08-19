@@ -97,7 +97,7 @@ def login():
 @app.route('/api/miembros', methods=['GET'])
 def obtener_miembros():
     try:
-        response = supabase.table('miembros').select('*').order('codigo').execute()
+        response = supabase.table('miembros').select('*').order('código').execute()
         return jsonify(response.data)
     except Exception as e:
         return jsonify({"error": str(e)}), 500

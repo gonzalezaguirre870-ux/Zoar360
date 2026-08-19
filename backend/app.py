@@ -5,6 +5,8 @@ import os
 import time
 from supabase import create_client, Client
 
+# mypy: ignore-errors
+
 app = Flask(__name__)
 
 # --- CONFIGURACIÓN CORS ---
@@ -19,7 +21,7 @@ app.config['SESSION_COOKIE_SAMESITE'] = 'None'
 app.config['SESSION_COOKIE_SECURE'] = True
 
 # =========================================================
-# CONEXIÓN A SUPABASE (¡YA CON TUS DATOS REALES!)
+# CONEXIÓN A SUPABASE
 # =========================================================
 SUPABASE_URL = "https://noxdmoxlytpsmkyclpna.supabase.co"
 SUPABASE_KEY = "sb_publishable_wvWGLVcc3TtyAh3YT5Fuvw_Id1M4q4P"
@@ -35,13 +37,13 @@ MAPEO_MINISTERIOS = {
     "fraternidad@iglesiazoarsv.org": {"grupo": "Fraternidad de Varones", "dia": 3, "msg": "los jueves de 5:45 PM a 7:00 PM"},
     "exploradores@iglesiazoarsv.org": {"grupo": "Exploradores del Rey", "dia": 4, "msg": "los viernes de 5:45 PM a 7:00 PM"},
     "embajadores@iglesiazoarsv.org": {"grupo": "Embajadores de Cristo", "dia": 5, "msg": "los sábados de 5:45 PM a 7:00 PM"},
-    "secretariageneral@iglesiazoarsv.org": {"grupo": "Culto General", "dia": 6, "msg": "los domingos de 2:45 PM a 7:00 PM"}
+    "secretariageneral@iglesiazoarsv.org": {"grupo": "Culto General", "dia": 6, "msg": "los domingos de 2:45 PM a 4:00 PM"}
 }
 
 # --- DICCIONARIO DE INTENTOS FALLIDOS (MEMORIA LOCAL) ---
 intentos_fallidos = {}
 
-# ==================== LOGIN ====================
+# ==================== LOGIN CON DEPURACIÓN ====================
 @app.route('/api/login', methods=['POST'])
 def login():
     data = request.json or {}
@@ -60,6 +62,9 @@ def login():
 
     try:
         password_limpia = password.strip()
+        print(f"Intentando login con email: {email} y tabla: usuario") # <--- Línea de depuración
+
+        # CORRECCIÓN CRUCIAL: Usar el nombre de tu tabla real 'usuario'
         response = supabase.table('usuario').select('*').eq('email', email).eq('password_hash', password_limpia).execute()
         
         if response.data and len(response.data) > 0:
@@ -68,8 +73,8 @@ def login():
             if email in intentos_fallidos: del intentos_fallidos[email]
             
             session.clear()
-            session['user_id'] = user['id'] # pyright: ignore[reportArgumentType]
-            session['user_rol'] = user['rol']  # type: ignore
+            session['user_id'] = user['id']  # type: ignore
+            session['user_rol'] = user['rol'] # type: ignore
             session['user_email'] = user['email'] # type: ignore
             return jsonify({"message": "Login exitoso", "rol": user['rol'], "email": user['email']}), 200 # type: ignore
         else:
@@ -85,9 +90,13 @@ def login():
             return jsonify({"error": "Credenciales incorrectas"}), 401
             
     except Exception as e:
-        return jsonify({"error": f"Error de base de datos: {str(e)}"}), 500
+        # ESTO IMPRIMIRÁ EL ERROR REAL EN LOS LOGS DE RENDER
+        print(f"!!! ERROR FATAL EN LOGIN: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({"error": f"Error interno del servidor: {str(e)}"}), 500
 
-# ==================== MIEMBROS (CORREGIDO: SIN ACENTOS) ====================
+# ==================== MIEMBROS ====================
 @app.route('/api/miembros', methods=['GET'])
 def obtener_miembros():
     try:
@@ -116,7 +125,6 @@ def crear_miembro():
     if not nombre: return jsonify({"error": "El nombre es obligatorio."}), 400
 
     try:
-        # Obtener último código
         last = supabase.table('miembros').select('codigo').order('codigo', desc=True).limit(1).execute()
         if last.data and len(last.data) > 0 and last.data[0]['codigo']: # type: ignore
             ultimo_num = int(last.data[0]['codigo']) # type: ignore
@@ -160,7 +168,6 @@ def eliminar_miembro(codigo):
         
         supabase.table('miembros').delete().eq('codigo', codigo).execute()
         
-        # Reindexar códigos
         todos = supabase.table('miembros').select('id').order('id').execute()
         for index, row in enumerate(todos.data):
             nuevo_cod = f"{index + 1:04d}"
